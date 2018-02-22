@@ -2,6 +2,9 @@
 <html>
 <head>
 <meta charset="UTF-8">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.css">
+<script defer src="https://use.fontawesome.com/releases/v5.0.0/js/all.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 <script>
 $(function() {
@@ -21,18 +24,14 @@ function updateRangeInput(elem) {
 <style>
 input { border: 1px solid #ddd; color: #555;}
 
-body {	background-color: #bcedff;}
-
-tbody tr:nth-child(odd) { background-color: #ddf;  }
-
 table {
-	width: 100%;
+  width: 100%;
     border-spacing: 0;
 }
 
 .content { display:none;}
 .item1 { grid-area: header; }
-.item2 { grid-area: menu; }	
+.item2 { grid-area: menu; }
 .item3 { grid-area: main; }
 .item5 { grid-area: footer; }
 
@@ -62,12 +61,12 @@ ul {
 li {  float: left;}
 
 #clock {
-	display: block;
+  display: block;
     color: white;
     text-align: center;
     padding: 14px 16px;
     text-decoration: none;
-	float: right;
+  float: right;
 }
 
 li a {
@@ -83,68 +82,96 @@ li a:hover {   background-color: #111;}
 </head>
 <body>
 
-<div class="grid-container">
-  <div class="item1">
-  	<ul id="menu">
-  		<li><a href="#" data-page="status">Status</a></li>
-  		<li><a href="#" data-page="vv">Ventilation & Värme</a></li>
-        <li><a href="#" data-page="vattning">Bevattning</a></li>
-        <li><a href="#" data-page="settings">Inställningar</a></li>
-        <li id="clock">10:23</li></ul>
-   </div>
-  <div id="status" class="item2"> 
+<nav class="navbar" role="navigation" aria-label="main navigation">
+  <div class="navbar-brand">
+    <a class="navbar-item" href="https://bulma.io">
+      <img src="https://bulma.io/images/bulma-logo.png" alt="Bulma: a modern CSS framework based on Flexbox" width="112" height="28">
+    </a>
+  </div>
+  <div class="navbar-menu" id="menu">
+    <div class="navbar-start">
+      <a class="navbar-item" data-page="status">
+        Status
+      </a>
+      <a class="navbar-item" data-page="vv">
+        Ventilation & Värme
+      </a>
+      <a class="navbar-item" data-page="vattning">
+        Bevattning
+      </a>
+      <a class="navbar-item" data-page="settings">
+        Inställningar
+      </a>
+    </div>
+
+    <div class="navbar-end">
+      <div class="navbar-item">
+        <div class="field">
+          10:23
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="table is-striped">
+  <div id="status" class="item2">
     <table>
-      <tr>
-        <th>Egenskap</th>
-        <th>Värde</th>
-	    <th>Status</th>
-      </tr>
-      <tr>
-        <td>Ventilation Nord</td>
-        <td>33%</td>
-        <td>Öppnar</td>
-      </tr>
-      <tr>
-        <td>Ventilation Syd</td>
-        <td>0%</td>
-        <td>Stilla</td>
-      </tr>
-      <tr>
-        <td>Vattenventil 1</td>
-        <td>Stängd</td>
-        <td>Öppnar 16:00</td>
-      </tr>
-      <tr>
-        <td>Vattenventil 2</td>
-        <td>Öppen</td>
-        <td>Stänger 15:22</td>
-      </tr>
-      <tr>
-        <td>Luftemperatur växthus</td>
-        <td>22 &deg;C</td>
-        <td></td>
-      </tr>
-      <tr>
-        <td>Byvind</td>
-        <td>&#8598; 15m/s</td>
-        <td></td>
-      </tr>
-      <tr>
-        <td>Nederbörd</td>
-        <td>0.0mm/h</td>
-        <td></td>
-      </tr>
+      <thead>
+        <tr>
+          <th>Egenskap</th>
+          <th>Värde</th>
+        <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Ventilation Nord</td>
+          <td>33%</td>
+          <td>Öppnar</td>
+        </tr>
+        <tr>
+          <td>Ventilation Syd</td>
+          <td>0%</td>
+          <td>Stilla</td>
+        </tr>
+        <tr>
+          <td>Vattenventil 1</td>
+          <td>Stängd</td>
+          <td>Öppnar 16:00</td>
+        </tr>
+        <tr>
+          <td>Vattenventil 2</td>
+          <td>Öppen</td>
+          <td>Stänger 15:22</td>
+        </tr>
+        <tr>
+          <td>Luftemperatur växthus</td>
+          <td>22 &deg;C</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>Byvind</td>
+          <td>&#8598; 15m/s</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>Nederbörd</td>
+          <td>0.0mm/h</td>
+          <td></td>
+        </tr>
+      </tbody>
     </table>
   </div>
   <div id="vv" class="item2 content">
   <table>
-  
+
     <tr>
       <th>Egenskap</th>
       <th>Ändra</th>
-	  <th>Nuvarande värde</th>
+    <th>Nuvarande värde</th>
     </tr>
-	<tr>
+  <tr>
       <td>Ventilationsautomatik på/av</td>
       <td><input type="checkbox" checked="checked"></td>
       <td></td>
@@ -182,9 +209,5 @@ li a:hover {   background-color: #111;}
   </table>
   </div>
 </div>
-
-
-
-
 </body>
 </html>
