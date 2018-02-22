@@ -14,6 +14,10 @@ $(function() {
         curPage=$(this).data("page");
         $("#"+curPage).show();
     });
+
+    $("#touch-menu").click(function() {
+      $('#menu').toggleClass('is-active')
+    })
 });
 
 function updateRangeInput(elem) {
@@ -87,6 +91,11 @@ li a:hover {   background-color: #111;}
     <a class="navbar-item" href="https://bulma.io">
       <img src="https://bulma.io/images/bulma-logo.png" alt="Bulma: a modern CSS framework based on Flexbox" width="112" height="28">
     </a>
+    <div class="navbar-burger" id="touch-menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
   </div>
   <div class="navbar-menu" id="menu">
     <div class="navbar-start">
