@@ -2,6 +2,11 @@
 import revpimodio2
 import time
 import PID
+import threading
+from flask import Flask, render_template
+from flask_socketio import SocketIO
+from ZODB import FileStorage, DB
+import transaction
 
 class ventmotor:
     def __init__(self, go_up, go_down, up_switch, down_switch, io):
@@ -14,11 +19,11 @@ class ventmotor:
         self.minposition = 0
         self.io = io
 
-    def defineMaxPosition():
-        #öppna ventilationen tills övermomentskretsen löser ut.
+    def setmaxposition():
+        #
         self.maxposition = 100
 
-    def moveToPosition(self, position):
+    def moveabsoluteposition(self, position):
         if position > self.position:
             self.io.setoutput(self.go_up, True)
             movement = position - self.position
@@ -29,15 +34,21 @@ class ventmotor:
             movement = position - self.position
             time.sleep(abs(movement))
             self.io.setoutput(self.go_down, False)
-
         self.position = position
+
+    def moverelativeposition(self, position, direction):
+        if direction == 'up':
+            new_position = position + self.position
+        else:
+            new_position = position - self.position
+        self.moveabsoluteposition(new_position)
 
 
 class io():
     def __init__(self):
         self.revpi = revpimodio2.RevPiModIO(autorefresh=True)
-        self.revpi.handlesignalend(self.exitfunktion)
-        self.revpi.io.Input.reg_event(self.eventfunktion)
+    #    self.revpi.handlesignalend(self.exitfunktion)
+    #    self.revpi.io.Input.reg_event(self.eventfunktion)
 
     def eventfunktion(self, ioname, iovalue):
         self.revpi.io.Output.value = iovalue
@@ -67,27 +78,63 @@ class io():
         elif output == 'O_8':
             self.revpi.io.O_8.value = value
         print ('set output', output, 'to', value)
-    def watch():
-        self.revpi.mainloop()
+    #def watch():
+    #    self.revpi.mainloop()
 
+class tempregulator():
+    def __init__(self, factor=1):
+        self.setpoint = 1
+        self.correction = 0
+        self.factor = factor
+    def update(self, temp, setpoint):
+        self.correction = abs(temp - self.setpoint) * self.factor
+
+class webserver():
+    def __init__(self):
+        app = Flask(__name__)
+        app.config['SECRET_KEY'] = 'secret!'
+        socketio = SocketIO(app)
+
+        @app.route("/")
+        def index():
+            return render_template('index.html')
+
+        @socketio.on('my_event', namespace='/test')
+        def handle_client_connect_event(json):
+            print ('Ny klient ansluten')
+            print (json)
+
+        @app.route('/static/<path:path>')
+        def send_static(path):
+            return send_from_directory('static', path)
+
+        socketio.run(app, host='0.0.0.0', port=5050)
+
+class database():
+    def __init__(self):
+        storage = FileStorage.FileStorage('database.fs')
+        db = DB(storage)
+        self.connection = db.open()
+
+
+class ventilationserver():
+    def __init__(self):
+        self.io = io()
+        motornord = ventmotor('O_1', 'O_2', 'I_1', 'I_2', self.io)
+        motorsyd = ventmotor('O_3', 'O_4', 'I_3', 'I_4', self.io)
+        root = database().connection.root()
+        
+        regulator = tempregulator()
+        while 1:
+            regulator.update(21, root['TempSetPoint'])
+            motornord.moverelativeposition(regulator.correction, 'up')
+            time.sleep(5)
 
 if __name__ == "__main__":
-    root = io()
-    motornord = ventmotor('O_1', 'O_2', 'I_1', 'I_2', root)
-    motorsyd = ventmotor('O_3', 'O_4', 'I_3', 'I_4', root)
 
-
-    pid = PID.PID(2, 0.1, 0.0)
-    pid.SetPoint = 21
-    pid.update(20)
-    time.sleep(1)
-    while 1:
-        with open('temp', 'r') as myfile:
-            temp=myfile.read().replace('\n', '')
-            temp = int(temp)
-        pid.update(temp)
-        motornord.moveToPosition(pid.output)
-        print ('PID Output', pid.output)
-        print ('PID PV', temp)
-        print ('--')
-        time.sleep(5)
+    webserver = threading.Thread(target=webserver)
+    ventilationserver = threading.Thread(target=ventilationserver)
+    
+    webserver.start()
+    ventilationserver.start()
+    

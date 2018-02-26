@@ -1,222 +1,277 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.css">
-<script defer src="https://use.fontawesome.com/releases/v5.0.0/js/all.js"></script>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-<script>
-$(function() {
-    var curPage="status";
-    $("#menu a").click(function() {
-        $("#"+curPage).hide();
-        curPage=$(this).data("page");
-        $("#"+curPage).show();
-    });
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.css">
+  <link rel="stylesheet" type="test/css" href="style.css">
+  <script defer src="https://use.fontawesome.com/releases/v5.0.0/js/all.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.5/socket.io.min.js"></script>
+  <script type="text/javascript" charset="utf-8">
+    $(document).ready(function() {
+            // Use a "/test" namespace.
+            // An application can open a connection on multiple namespaces, and
+            // Socket.IO will multiplex all those connections on a single
+            // physical channel. If you don't care about multiple channels, you
+            // can set the namespace to an empty string.
+            namespace = '/test';
 
-    $("#touch-menu").click(function() {
-      $('#menu').toggleClass('is-active')
-    })
-});
+            // Connect to the Socket.IO server.
+            // The connection URL has the following format:
+            //     http[s]://<domain>:<port>[/<namespace>]
+            var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + namespace);
 
-function updateRangeInput(elem) {
-  $(elem).next().val($(elem).val());
-}
+            // Event handler for new connections.
+            // The callback function is invoked when a connection with the
+            // server is established.
+            socket.on('connect', function() {
+              socket.emit('my_event', {data: 'I\'m connected!'});
+            });
 
-</script>
-<style>
-input { border: 1px solid #ddd; color: #555;}
+            // Event handler for server sent data.
+            // The callback function is invoked whenever the server emits data
+            // to the client. The data is then displayed in the "Received"
+            // section of the page.
+            socket.on('my_response', function(msg) {
+              $('#log').append('<br>' + $('<div/>').text('Received #' + msg.count + ': ' + msg.data).html());
+            });
 
-table {
-  width: 100%;
-    border-spacing: 0;
-}
 
-.content { display:none;}
-.item1 { grid-area: header; }
-.item2 { grid-area: menu; }
-.item3 { grid-area: main; }
-.item5 { grid-area: footer; }
+            // Handlers for the different forms in the page.
+            // These accept data from the user and send it to the server in a
+            // variety of ways
+            $('form#ventautswtich').submit(function(event) {
+              socket.emit('my_event', {data: $('#emit_data').val()});
+              return false;
+            });
+            $('form#ventnord').submit(function(event) {
+              socket.emit('my_event', {data: $('#emit_data').val()});
+              return false;
+            });
+            $('form#ventsyd').submit(function(event) {
+              socket.emit('my_broadcast_event', {data: $('#broadcast_data').val()});
+              return false;
+            });
+            $('form#tempsetpointday').submit(function(event) {
+              socket.emit('my_broadcast_event', {data: $('#broadcast_data').val()});
+              return false;
+            });
+            $('form#tempsetpointnight').submit(function(event) {
+              socket.emit('my_event', {data: $('#emit_data').val()});
+              return false;
+            });
+            $('form#heatersetpoint').submit(function(event) {
+              socket.emit('my_event', {data: $('#emit_data').val()});
+              return false;
+            });
+            $('form#heaterswitch').submit(function(event) {
+              socket.emit('my_event', {data: $('#emit_data').val()});
+              return false;
+            });
+          });
 
-.grid-container {
-  font-family: Consolas;
-  display: grid;
-  grid-template-areas:
-    'header header header header'
-    'menu menu menu menu'
-    'menu menu menu menu';
-  grid-gap: 5px;
-  padding: 0px;
-}
-.grid-container > div {
-  text-align: left;
-  padding: 0;
-  font-size: 15px;
-}
-ul {
-    list-style-type: none;
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-    background-color: #333;
-}
 
-li {  float: left;}
+          $(function() {
+            var curPage="status";
+            $("#menu a").click(function() {
+              $("#"+curPage).hide();
+              curPage=$(this).data("page");
+              $("#"+curPage).show();
+            });
+          });
 
-#clock {
-  display: block;
-    color: white;
-    text-align: center;
-    padding: 14px 16px;
-    text-decoration: none;
-  float: right;
-}
 
-li a {
-    display: block;
-    color: white;
-    text-align: center;
-    padding: 14px 16px;
-    text-decoration: none;
-}
+          function updateRangeInput(elem) {
+            $(elem).next().val($(elem).val());
+          }
 
-li a:hover {   background-color: #111;}
-</style>
-</head>
-<body>
+        </script>
+        <style>
+        input { border: 1px solid #ddd; color: #555;}
 
-<nav class="navbar" role="navigation" aria-label="main navigation">
-  <div class="navbar-brand">
-    <a class="navbar-item" href="https://bulma.io">
-      <img src="https://bulma.io/images/bulma-logo.png" alt="Bulma: a modern CSS framework based on Flexbox" width="112" height="28">
-    </a>
-    <div class="navbar-burger" id="touch-menu">
-      <span></span>
-      <span></span>
-      <span></span>
-    </div>
-  </div>
-  <div class="navbar-menu" id="menu">
-    <div class="navbar-start">
-      <a class="navbar-item" data-page="status">
-        Status
-      </a>
-      <a class="navbar-item" data-page="vv">
-        Ventilation & Värme
-      </a>
-      <a class="navbar-item" data-page="vattning">
-        Bevattning
-      </a>
-      <a class="navbar-item" data-page="settings">
-        Inställningar
-      </a>
-    </div>
+        table {
+          width: 100%;
+          border-spacing: 0;
+        }
 
-    <div class="navbar-end">
-      <div class="navbar-item">
-        <div class="field">
-          10:23
+        .content { display:none;}
+        .item1 { grid-area: header; }
+        .item2 { grid-area: menu; }
+        .item3 { grid-area: main; }
+        .item5 { grid-area: footer; }
+
+        .grid-container {
+          font-family: Consolas;
+          display: grid;
+          grid-template-areas:
+          'header header header header'
+          'menu menu menu menu'
+          'menu menu menu menu';
+          grid-gap: 5px;
+          padding: 0px;
+        }
+        .grid-container > div {
+          text-align: left;
+          padding: 0;
+          font-size: 15px;
+        }
+        ul {
+          list-style-type: none;
+          margin: 0;
+          padding: 0;
+          overflow: hidden;
+          background-color: #333;
+        }
+
+        li {  float: left;}
+
+        #clock {
+          display: block;
+          color: white;
+          text-align: center;
+          padding: 14px 16px;
+          text-decoration: none;
+          float: right;
+        }
+
+        li a {
+          display: block;
+          color: white;
+          text-align: center;
+          padding: 14px 16px;
+          text-decoration: none;
+        }
+
+        li a:hover {   background-color: #111;}
+      </style>
+    </head>
+    <body>
+
+      <nav class="navbar" role="navigation" aria-label="main navigation">
+
+        <div class="navbar-menu" id="menu">
+          <div class="navbar-start">
+            <a class="navbar-item" data-page="status">
+              Status
+            </a>
+            <a class="navbar-item" data-page="vv">
+              Ventilation å Värme
+            </a>
+            <a class="navbar-item" data-page="vattning">
+              Bevattning
+            </a>
+            <a class="navbar-item" data-page="settings">
+              Inställningar
+            </a>
+          </div>
+
+          <div class="navbar-end">
+            <div class="navbar-item">
+              <div class="field">
+                10:23
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  </div>
-</nav>
+      </nav>
 
-<div class="table is-striped">
-  <div id="status" class="item2">
-    <table>
-      <thead>
-        <tr>
-          <th>Egenskap</th>
-          <th>Värde</th>
-        <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Ventilation Nord</td>
-          <td>33%</td>
-          <td>Öppnar</td>
-        </tr>
-        <tr>
-          <td>Ventilation Syd</td>
-          <td>0%</td>
-          <td>Stilla</td>
-        </tr>
-        <tr>
-          <td>Vattenventil 1</td>
-          <td>Stängd</td>
-          <td>Öppnar 16:00</td>
-        </tr>
-        <tr>
-          <td>Vattenventil 2</td>
-          <td>Öppen</td>
-          <td>Stänger 15:22</td>
-        </tr>
-        <tr>
-          <td>Luftemperatur växthus</td>
-          <td>22 &deg;C</td>
-          <td></td>
-        </tr>
-        <tr>
-          <td>Byvind</td>
-          <td>&#8598; 15m/s</td>
-          <td></td>
-        </tr>
-        <tr>
-          <td>Nederbörd</td>
-          <td>0.0mm/h</td>
-          <td></td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-  <div id="vv" class="item2 content">
-  <table>
+      <div class="table is-striped">
+        <div id="status" class="item2">
+          <table>
+            <thead>
+              <tr>
+                <th>Egenskap</th>
+                <th>Värde</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Ventilation Nord</td>
+                <td>33%</td>
+                <td>Öppnar</td>
+              </tr>
+              <tr>
+                <td>Ventilation Syd</td>
+                <td>0%</td>
+                <td>Stilla</td>
+              </tr>
+              <tr>
+                <td>Vattenventil 1</td>
+                <td>Stängd</td>
+                <td>Öppnar 16:00</td>
+              </tr>
+              <tr>
+                <td>Vattenventil 2</td>
+                <td>Öppen</td>
+                <td>Stänger 15:22</td>
+              </tr>
+              <tr>
+                <td>Luftemperatur växthus</td>
+                <td>22 &deg;C</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td>Byvind</td>
+                <td>&#8598; 15m/s</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td>Nederbörd</td>
+                <td>0.0mm/h</td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="vv" class="item2 content">
+          <table>
 
-    <tr>
-      <th>Egenskap</th>
-      <th>Ändra</th>
-    <th>Nuvarande värde</th>
-    </tr>
-  <tr>
-      <td>Ventilationsautomatik på/av</td>
-      <td><input type="checkbox" checked="checked"></td>
-      <td></td>
-    </tr>
-    <tr>
-      <td>&nbsp;&nbsp;Ventilation Nord</td>
-      <td><input type="range" min="1" max="100" value="0" class="slider" id="myRange" oninput="updateRangeInput(this)"><output type="text" value="8">0</output>%</td>
-      <td>0%</td>
-    </tr>
-    <tr>
-      <td>&nbsp;&nbsp;Ventilation Syd</td>
-      <td><input type="range" min="1" max="100" value="33" class="slider" id="myRange" oninput="updateRangeInput(this)"><output type="text" value="8">33</output>%</td>
-      <td>15%</td>
-    </tr>
-    <tr>
-      <td>Temperatur börvärde dag</td>
-      <td><input type="range" min="-15" max="30" value="20" class="slider" id="myRange" oninput="updateRangeInput(this)"><output type="text" value="8">20</output> &deg;C</td>
-      <td>20 &deg;C</td>
-    </tr>
-    <tr>
-      <td>Temperatur börvärde natt</td>
-      <td><input type="range" min="-15" max="30" value="18" class="slider" id="myRange" oninput="updateRangeInput(this)"><output type="text" value="8">18</output> &deg;C</td>
-      <td>18 &deg;C</td>
-    </tr>
-    <tr>
-      <td>Starttemperatur Värmetillskott</td>
-      <td><input type="range" min="-15" max="30" value="8" class="slider" id="myRange" oninput="updateRangeInput(this)"><output type="text" value="8">8</output> &deg;C</td>
-      <td>23 &deg;C</td>
-    </tr>
-    <tr>
-      <td>Värmetillskott av/på</td>
-      <td><input type="checkbox" checked="checked"></td>
-      <td></td>
-    </tr>
-  </table>
-  </div>
-</div>
-</body>
-</html>
+            <tr>
+              <th>Egenskap</th>
+              <th>Ändra</th>
+              <th>Nuvarande värde</th>
+            </tr>
+            <tr>
+              <td>Ventilationsautomatik på/av</td>
+              <td><input type="checkbox" checked="checked"></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td>&nbsp;&nbsp;Ventilation Nord</td>
+              <td><form id="ventautswtich" method="POST" action="#">
+                <input type="range" min="1" max="100" value="0" class="slider" id="emit_data" name="emit_data" oninput="updateRangeInput(this)">
+                <output type="text" value="8">0</output>%<input type="submit" value="Echo"></form></td>
+                <td>0%</td>
+              </tr>
+              <tr>
+                <td>&nbsp;&nbsp;Ventilation Syd</td>
+                <td><input type="range" min="1" max="100" value="33" class="slider" id="myRange" oninput="updateRangeInput(this)"><output type="text" value="8">33</output>%</td>
+                <td>15%</td>
+              </tr>
+              <tr>
+                <td>Temperatur börvärde dag</td>
+                <td><input type="range" min="-15" max="30" value="20" class="slider" id="myRange" oninput="updateRangeInput(this)"><output type="text" value="8">20</output> &deg;C</td>
+                <td>20 &deg;C</td>
+              </tr>
+              <tr>
+                <td>Temperatur börvärde natt</td>
+                <td><input type="range" min="-15" max="30" value="18" class="slider" id="myRange" oninput="updateRangeInput(this)"><output type="text" value="8">18</output> &deg;C</td>
+                <td>18 &deg;C</td>
+              </tr>
+              <tr>
+                <td>Starttemperatur Värmetillskott</td>
+                <td><input type="range" min="-15" max="30" value="8" class="slider" id="myRange" oninput="updateRangeInput(this)"><output type="text" value="8">8</output> &deg;C</td>
+                <td>23 &deg;C</td>
+              </tr>
+              <tr>
+                <td>Värmetillskott av/på</td>
+                <td><input type="checkbox" checked="checked"></td>
+                <td></td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </body>
+      </html>
