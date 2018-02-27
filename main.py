@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 import revpimodio2
 import time
-import PID
 import threading
 from flask import Flask, render_template
 from flask_socketio import SocketIO
@@ -99,36 +98,43 @@ class webserver():
         def index():
             return render_template('index.html')
 
-        @socketio.on('my_event', namespace='/test')
+        @socketio.on('data_send', namespace='/test')
         def handle_client_connect_event(json):
-            print ('Ny klient ansluten')
-            print (json)
+            print ('Instruktioner mottaget', json)
+            #Skicka till databas här
+
+        @socketio.on('connected', namespace='/test')
+        def ccl(json):
+            print ('Ny användare ansluten', json)
 
         @app.route('/static/<path:path>')
         def send_static(path):
             return send_from_directory('static', path)
 
         socketio.run(app, host='0.0.0.0', port=5050)
+        print ('bajs')
 
 class database():
     def __init__(self):
         storage = FileStorage.FileStorage('database.fs')
         db = DB(storage)
         self.connection = db.open()
-
+    def newconn(self):
+        self.root = self.connection.root()
 
 class ventilationserver():
     def __init__(self):
         self.io = io()
         motornord = ventmotor('O_1', 'O_2', 'I_1', 'I_2', self.io)
         motorsyd = ventmotor('O_3', 'O_4', 'I_3', 'I_4', self.io)
-        root = database().connection.root()
+        root = database()
+        
         
         regulator = tempregulator()
         while 1:
             regulator.update(21, root['TempSetPoint'])
-            motornord.moverelativeposition(regulator.correction, 'up')
-            time.sleep(5)
+            #motornord.moverelativeposition(regulator.correction, 'up')
+            time.sleep(10)
 
 if __name__ == "__main__":
 

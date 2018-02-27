@@ -26,7 +26,7 @@
             // The callback function is invoked when a connection with the
             // server is established.
             socket.on('connect', function() {
-              socket.emit('my_event', {data: 'I\'m connected!'});
+              socket.emit('connected', {data: 'I\'m connected!'});
             });
 
             // Event handler for server sent data.
@@ -41,12 +41,12 @@
             // Handlers for the different forms in the page.
             // These accept data from the user and send it to the server in a
             // variety of ways
-            $('form#ventautswtich').submit(function(event) {
-              socket.emit('my_event', {data: $('#emit_data').val()});
+            $('form#ventautswtich').change(function(event) {
+              socket.emit('data_send', {data: $('#data').val()});
               return false;
             });
-            $('form#ventnord').submit(function(event) {
-              socket.emit('my_event', {data: $('#emit_data').val()});
+            $('form#ventnord').change(function(event) {
+              socket.emit('data_send', {ventnord: $('#emit_data').val()});
               return false;
             });
             $('form#ventsyd').submit(function(event) {
@@ -72,206 +72,215 @@
           });
 
 
-          $(function() {
-            var curPage="status";
-            $("#menu a").click(function() {
-              $("#"+curPage).hide();
-              curPage=$(this).data("page");
-              $("#"+curPage).show();
-            });
-          });
+    $(function() {
+      var curPage="status";
+      $("#menu a").click(function() {
+        $("#"+curPage).hide();
+        curPage=$(this).data("page");
+        $("#"+curPage).show();
+      });
+    });
 
 
-          function updateRangeInput(elem) {
-            $(elem).next().val($(elem).val());
-          }
+    function updateRangeInput(elem) {
+      $(elem).next().val($(elem).val());
+    }
 
-        </script>
-        <style>
-        input { border: 1px solid #ddd; color: #555;}
+  </script>
+  <style>
+  input { border: 1px solid #ddd; color: #555;}
 
-        table {
-          width: 100%;
-          border-spacing: 0;
-        }
+  table {
+    width: 100%;
+    border-spacing: 0;
+  }
 
-        .content { display:none;}
-        .item1 { grid-area: header; }
-        .item2 { grid-area: menu; }
-        .item3 { grid-area: main; }
-        .item5 { grid-area: footer; }
+  .content { display:none;}
+  .item1 { grid-area: header; }
+  .item2 { grid-area: menu; }
+  .item3 { grid-area: main; }
+  .item5 { grid-area: footer; }
 
-        .grid-container {
-          font-family: Consolas;
-          display: grid;
-          grid-template-areas:
-          'header header header header'
-          'menu menu menu menu'
-          'menu menu menu menu';
-          grid-gap: 5px;
-          padding: 0px;
-        }
-        .grid-container > div {
-          text-align: left;
-          padding: 0;
-          font-size: 15px;
-        }
-        ul {
-          list-style-type: none;
-          margin: 0;
-          padding: 0;
-          overflow: hidden;
-          background-color: #333;
-        }
+  .grid-container {
+    font-family: Consolas;
+    display: grid;
+    grid-template-areas:
+    'header header header header'
+    'menu menu menu menu'
+    'menu menu menu menu';
+    grid-gap: 5px;
+    padding: 0px;
+  }
+  .grid-container > div {
+    text-align: left;
+    padding: 0;
+    font-size: 15px;
+  }
+  ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #333;
+  }
 
-        li {  float: left;}
+  li {  float: left;}
 
-        #clock {
-          display: block;
-          color: white;
-          text-align: center;
-          padding: 14px 16px;
-          text-decoration: none;
-          float: right;
-        }
+  #clock {
+    display: block;
+    color: white;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+    float: right;
+  }
 
-        li a {
-          display: block;
-          color: white;
-          text-align: center;
-          padding: 14px 16px;
-          text-decoration: none;
-        }
+  li a {
+    display: block;
+    color: white;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+  }
 
-        li a:hover {   background-color: #111;}
-      </style>
-    </head>
-    <body>
+  li a:hover {   background-color: #111;}
+</style>
+</head>
+<body>
 
-      <nav class="navbar" role="navigation" aria-label="main navigation">
+  <nav class="navbar" role="navigation" aria-label="main navigation">
 
-        <div class="navbar-menu" id="menu">
-          <div class="navbar-start">
-            <a class="navbar-item" data-page="status">
-              Status
-            </a>
-            <a class="navbar-item" data-page="vv">
-              Ventilation å Värme
-            </a>
-            <a class="navbar-item" data-page="vattning">
-              Bevattning
-            </a>
-            <a class="navbar-item" data-page="settings">
-              Inställningar
-            </a>
-          </div>
+    <div class="navbar-menu" id="menu">
+      <div class="navbar-start">
+        <a class="navbar-item" data-page="status">
+          Status
+        </a>
+        <a class="navbar-item" data-page="vv">
+          Ventilation å Värme
+        </a>
+        <a class="navbar-item" data-page="vattning">
+          Bevattning
+        </a>
+        <a class="navbar-item" data-page="settings">
+          Inställningar
+        </a>
+      </div>
 
-          <div class="navbar-end">
-            <div class="navbar-item">
-              <div class="field">
-                10:23
-              </div>
-            </div>
+      <div class="navbar-end">
+        <div class="navbar-item">
+          <div class="field">
+            10:23
           </div>
         </div>
-      </nav>
+      </div>
+    </div>
+  </nav>
 
-      <div class="table is-striped">
-        <div id="status" class="item2">
-          <table>
-            <thead>
-              <tr>
-                <th>Egenskap</th>
-                <th>Värde</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Ventilation Nord</td>
-                <td>33%</td>
-                <td>Öppnar</td>
-              </tr>
-              <tr>
-                <td>Ventilation Syd</td>
-                <td>0%</td>
-                <td>Stilla</td>
-              </tr>
-              <tr>
-                <td>Vattenventil 1</td>
-                <td>Stängd</td>
-                <td>Öppnar 16:00</td>
-              </tr>
-              <tr>
-                <td>Vattenventil 2</td>
-                <td>Öppen</td>
-                <td>Stänger 15:22</td>
-              </tr>
-              <tr>
-                <td>Luftemperatur växthus</td>
-                <td>22 &deg;C</td>
-                <td></td>
-              </tr>
-              <tr>
-                <td>Byvind</td>
-                <td>&#8598; 15m/s</td>
-                <td></td>
-              </tr>
-              <tr>
-                <td>Nederbörd</td>
-                <td>0.0mm/h</td>
-                <td></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div id="vv" class="item2 content">
-          <table>
+  <div class="table is-striped">
+    <div id="status" class="item2">
+      <table>
+        <thead>
+          <tr>
+            <th>Egenskap</th>
+            <th>Värde</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Ventilation Nord</td>
+            <td>33%</td>
+            <td>Öppnar</td>
+          </tr>
+          <tr>
+            <td>Ventilation Syd</td>
+            <td>0%</td>
+            <td>Stilla</td>
+          </tr>
+          <tr>
+            <td>Vattenventil 1</td>
+            <td>Stängd</td>
+            <td>Öppnar 16:00</td>
+          </tr>
+          <tr>
+            <td>Vattenventil 2</td>
+            <td>Öppen</td>
+            <td>Stänger 15:22</td>
+          </tr>
+          <tr>
+            <td>Luftemperatur växthus</td>
+            <td>22 &deg;C</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>Byvind</td>
+            <td>&#8598; 15m/s</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>Nederbörd</td>
+            <td>0.0mm/h</td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="vv" class="item2 content">
+      <table>
 
-            <tr>
-              <th>Egenskap</th>
-              <th>Ändra</th>
-              <th>Nuvarande värde</th>
-            </tr>
-            <tr>
-              <td>Ventilationsautomatik på/av</td>
-              <td><input type="checkbox" checked="checked"></td>
-              <td></td>
-            </tr>
-            <tr>
-              <td>&nbsp;&nbsp;Ventilation Nord</td>
-              <td><form id="ventautswtich" method="POST" action="#">
-                <input type="range" min="1" max="100" value="0" class="slider" id="emit_data" name="emit_data" oninput="updateRangeInput(this)">
-                <output type="text" value="8">0</output>%<input type="submit" value="Echo"></form></td>
-                <td>0%</td>
-              </tr>
-              <tr>
-                <td>&nbsp;&nbsp;Ventilation Syd</td>
-                <td><input type="range" min="1" max="100" value="33" class="slider" id="myRange" oninput="updateRangeInput(this)"><output type="text" value="8">33</output>%</td>
-                <td>15%</td>
-              </tr>
-              <tr>
-                <td>Temperatur börvärde dag</td>
-                <td><input type="range" min="-15" max="30" value="20" class="slider" id="myRange" oninput="updateRangeInput(this)"><output type="text" value="8">20</output> &deg;C</td>
-                <td>20 &deg;C</td>
-              </tr>
-              <tr>
-                <td>Temperatur börvärde natt</td>
-                <td><input type="range" min="-15" max="30" value="18" class="slider" id="myRange" oninput="updateRangeInput(this)"><output type="text" value="8">18</output> &deg;C</td>
-                <td>18 &deg;C</td>
-              </tr>
-              <tr>
-                <td>Starttemperatur Värmetillskott</td>
-                <td><input type="range" min="-15" max="30" value="8" class="slider" id="myRange" oninput="updateRangeInput(this)"><output type="text" value="8">8</output> &deg;C</td>
-                <td>23 &deg;C</td>
-              </tr>
-              <tr>
-                <td>Värmetillskott av/på</td>
-                <td><input type="checkbox" checked="checked"></td>
-                <td></td>
-              </tr>
-            </table>
-          </div>
-        </div>
-      </body>
-      </html>
+        <tr>
+          <th>Egenskap</th>
+          <th>Ändra</th>
+          <th>Nuvarande värde</th>
+        </tr>
+        <tr>
+          <td>Ventilationsautomatik på/av</td>
+          <td>
+            <form id="ventautswtich" method="POST" action="#">
+              <input type="checkbox" checked="checked" value="True" id="data" name="emit_data">
+              <output type="text" value="8">0</output>  
+            </form>
+          </td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>&nbsp;&nbsp;Ventilation Nord</td>
+          <td>
+            <form id="ventnord" method="POST" action="#">
+              <input type="range" min="1" max="100" value="0" class="slider" id="emit_data" name="emit_data" oninput="updateRangeInput(this)" >
+              <output type="text" value="8">0</output>%
+            </form>
+          </td>
+          <td>0%</td>
+        </tr>
+        <tr>
+          <td>&nbsp;&nbsp;Ventilation Syd</td>
+          <td><input type="range" min="1" max="100" value="33" class="slider" id="myRange" oninput="updateRangeInput(this)">
+            <output type="text" value="8">33</output>%</td>
+          <td>15%</td>
+        </tr>
+        <tr>
+          <td>Temperatur börvärde dag</td>
+          <td><input type="range" min="-15" max="30" value="20" class="slider" id="myRange" oninput="updateRangeInput(this)"><output type="text" value="8">20</output> &deg;C</td>
+          <td>20 &deg;C</td>
+        </tr>
+        <tr>
+          <td>Temperatur börvärde natt</td>
+          <td><input type="range" min="-15" max="30" value="18" class="slider" id="myRange" oninput="updateRangeInput(this)" ><output type="text" value="8">18</output> &deg;C</td>
+          <td>18 &deg;C</td>
+        </tr>
+        <tr>
+          <td>Starttemperatur Värmetillskott</td>
+          <td><input type="range" min="-15" max="30" value="8" class="slider" id="myRange" oninput="updateRangeInput(this)"><output type="text" value="8">8</output> &deg;C</td>
+          <td>23 &deg;C</td>
+        </tr>
+        <tr>
+          <td>Värmetillskott av/på</td>
+          <td><input type="checkbox" checked="checked"></td>
+          <td></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</body>
+</html>
