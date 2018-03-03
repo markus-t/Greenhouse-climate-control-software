@@ -34,7 +34,7 @@
             // to the client. The data is then displayed in the "Received"
             // section of the page.
             socket.on('my_response', function(msg) {
-              $('#log').append('<br>' + $('<div/>').text('Received #' + msg.count + ': ' + msg.data).html());
+              $('#log').append('<br>' + $('<div/>').text('Received #' + msg.TempSetPoint).html());
             });
 
 
@@ -49,24 +49,24 @@
               socket.emit('data_send', {ventnord: $('#emit_data').val()});
               return false;
             });
-            $('form#ventsyd').submit(function(event) {
-              socket.emit('my_broadcast_event', {data: $('#broadcast_data').val()});
+            $('form#ventsyd').change(function(event) {
+              socket.emit('data_send', {ventsyd: $('#emit_data').val()});
               return false;
             });
-            $('form#tempsetpointday').submit(function(event) {
-              socket.emit('my_broadcast_event', {data: $('#broadcast_data').val()});
+            $('form#tempsetpointday').change(function(event) {
+              socket.emit('data_send', {tempsetpointday: $('#broadcast_data').val()});
               return false;
             });
-            $('form#tempsetpointnight').submit(function(event) {
-              socket.emit('my_event', {data: $('#emit_data').val()});
+            $('form#tempsetpointnight').change(function(event) {
+              socket.emit('data_send', {tempsetpointnight: $('#emit_data').val()});
               return false;
             });
-            $('form#heatersetpoint').submit(function(event) {
-              socket.emit('my_event', {data: $('#emit_data').val()});
+            $('form#heatersetpoint').change(function(event) {
+              socket.emit('data_send', {heatersetpoint: $('#emit_data').val()});
               return false;
             });
-            $('form#heaterswitch').submit(function(event) {
-              socket.emit('my_event', {data: $('#emit_data').val()});
+            $('form#heaterswitch').change(function(event) {
+              socket.emit('data_send', {heaterswitch: $('#emit_data').val()});
               return false;
             });
           });
@@ -255,7 +255,9 @@
         </tr>
         <tr>
           <td>&nbsp;&nbsp;Ventilation Syd</td>
-          <td><input type="range" min="1" max="100" value="33" class="slider" id="myRange" oninput="updateRangeInput(this)">
+          <td>
+            <form id="ventsyd" method="POST" action="#">
+              <input type="range" min="1" max="100" value="33" class="slider" id="emit_data" oninput="updateRangeInput(this)">
             <output type="text" value="8">33</output>%</td>
           <td>15%</td>
         </tr>
@@ -277,10 +279,11 @@
         <tr>
           <td>Värmetillskott av/på</td>
           <td><input type="checkbox" checked="checked"></td>
-          <td></td>
+          <td>    <div id="log"></div></td>
         </tr>
       </table>
     </div>
   </div>
+
 </body>
 </html>
