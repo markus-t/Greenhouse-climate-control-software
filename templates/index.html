@@ -34,7 +34,8 @@
             // to the client. The data is then displayed in the "Received"
             // section of the page.
             socket.on('my_response', function(msg) {
-              $('#log').append('<br>' + $('<div/>').text('Received #' + msg.TempSetPoint).html());
+              $('#motornordPosition').html(msg.motornord.position);
+              $('#motorsydPosition').html(msg.motorsyd.position);
             });
 
 
@@ -42,23 +43,24 @@
             // These accept data from the user and send it to the server in a
             // variety of ways
             $('form#ventautswtich').change(function(event) {
-              socket.emit('data_send', {data: $('#data').val()});
+              socket.emit('data_send', {VentAutSwitch: $('#data').is(':checked')});
+              $(".vent").toggle("fast");
               return false;
             });
             $('form#ventnord').change(function(event) {
-              socket.emit('data_send', {ventnord: $('#emit_data').val()});
+              socket.emit('data_send', {motornord: {movetoposition: $('#emit_data').val()}});
               return false;
             });
             $('form#ventsyd').change(function(event) {
-              socket.emit('data_send', {ventsyd: $('#emit_data').val()});
+              socket.emit('data_send', {motorsyd: {movetoposition:  $('#emit_data').val()}});
               return false;
             });
             $('form#tempsetpointday').change(function(event) {
-              socket.emit('data_send', {tempsetpointday: $('#broadcast_data').val()});
+              socket.emit('data_send', {TempSetPointDay: $('#d').val()});
               return false;
             });
             $('form#tempsetpointnight').change(function(event) {
-              socket.emit('data_send', {tempsetpointnight: $('#emit_data').val()});
+              socket.emit('data_send', {tempsetpointnight: $('#d').val()});
               return false;
             });
             $('form#heatersetpoint').change(function(event) {
@@ -189,12 +191,12 @@
         <tbody>
           <tr>
             <td>Ventilation Nord</td>
-            <td>33%</td>
+            <td id="motornordPosition"></td>
             <td>Öppnar</td>
           </tr>
           <tr>
             <td>Ventilation Syd</td>
-            <td>0%</td>
+            <td id="motorsydPosition"></td>
             <td>Stilla</td>
           </tr>
           <tr>
@@ -237,13 +239,12 @@
           <td>Ventilationsautomatik på/av</td>
           <td>
             <form id="ventautswtich" method="POST" action="#">
-              <input type="checkbox" checked="checked" value="True" id="data" name="emit_data">
-              <output type="text" value="8">0</output>  
+              <input type="checkbox" value="True" id="data" name="emit_data">
             </form>
           </td>
           <td></td>
         </tr>
-        <tr>
+        <tr class="vent">
           <td>&nbsp;&nbsp;Ventilation Nord</td>
           <td>
             <form id="ventnord" method="POST" action="#">
@@ -253,22 +254,29 @@
           </td>
           <td>0%</td>
         </tr>
-        <tr>
+        <tr class="vent">
           <td>&nbsp;&nbsp;Ventilation Syd</td>
           <td>
             <form id="ventsyd" method="POST" action="#">
               <input type="range" min="1" max="100" value="33" class="slider" id="emit_data" oninput="updateRangeInput(this)">
-            <output type="text" value="8">33</output>%</td>
+              <output type="text" value="8">33</output>%
+            </form>
+          </td>
           <td>15%</td>
         </tr>
         <tr>
           <td>Temperatur börvärde dag</td>
-          <td><input type="range" min="-15" max="30" value="20" class="slider" id="myRange" oninput="updateRangeInput(this)"><output type="text" value="8">20</output> &deg;C</td>
+          <td>
+            <form id="tempsetpointday" method="POST" action="#">
+              <input type="range" min="1" max="30" value="20" class="slider" id="d" oninput="updateRangeInput(this)">
+              <output type="text" value="8">20</output> &deg;C
+            </form>
+          </td>
           <td>20 &deg;C</td>
         </tr>
         <tr>
           <td>Temperatur börvärde natt</td>
-          <td><input type="range" min="-15" max="30" value="18" class="slider" id="myRange" oninput="updateRangeInput(this)" ><output type="text" value="8">18</output> &deg;C</td>
+          <td><input type="range" min="1" max="30" value="18" class="slider" id="myRange" oninput="updateRangeInput(this)" ><output type="text" value="8">18</output> &deg;C</td>
           <td>18 &deg;C</td>
         </tr>
         <tr>
