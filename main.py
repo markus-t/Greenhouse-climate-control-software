@@ -25,69 +25,72 @@ def reassign(ordbok):
 
 class ventmotor:
     def __init__(self, go_up, go_down, up_switch, down_switch, io, db2, motor_name):
-        self.db2 = db2
-        self.databas = db2['data']
+        self.databas = db2
         self.go_up = go_up
         self.go_down = go_down
         self.up_switch = up_switch
         self.down_switch = down_switch
         self.motor_name = motor_name
         self.io = io
+        self.rangemargin = 1
 
     def testrange(self):
-        self.io.setoutput(self.go_down, True)
-        self.io.setoutput(self.go_up, False)
-        sleep(0.2)
-        while self.io.getoutput(self.down_switch) == True:
-            sleep(1)
-            logging.debug('Ventmotor: testrange: down while sleep 0.5 sec')
-
-        logging.debug('Ventmotor: testrange: while down exit')
-
-        self.io.setoutput(self.go_down, False) 
+        self.io.setoutput(self.go_down, False)
         self.io.setoutput(self.go_up, True)
-        sleep(1)
-        start_time = time()
+        sleep(0.5)
         while self.io.getoutput(self.up_switch) == True:
-            sleep(1)
+            sleep(0.5)
             logging.debug('Ventmotor: testrange: up while sleep 0.5 sec')
+
+        logging.debug('Ventmotor: testrange: while up exit')
+
+        self.io.setoutput(self.go_down, True) 
+        self.io.setoutput(self.go_up, False)
+
+        start_time = time()
+        sleep(1)
+        while self.io.getoutput(self.down_switch) == True:
+            sleep(0.5)
+            logging.debug('Ventmotor: testrange: down while sleep 0.5 sec')
         
-        end_time = time()
+        end_time = time() - self.rangemargin
 
         self.io.setoutput(self.go_down, False) 
         self.io.setoutput(self.go_up, False)
 
-        self.databas[self.motor_name]['ranger'] = abs(end_time - start_time)
-        self.db2 = reassign(self.db2)
+        self.databas['data'][self.motor_name]['ranger'] = int(end_time - start_time)
+        self.databas['data'] = reassign(self.databas['data'])
         transaction.commit()
 
     def moveabsoluteposition(self, position):
-        if position > self.databas[self.motor_name]['position']:
-            movement = position - self.databas[self.motor_name]['position']
+        if position > self.databas['data'][self.motor_name]['position']:
+            movement = position - self.databas['data'][self.motor_name]['position']
             logging.debug('Set output %s True for %s seconds', self.go_up, abs(movement))
             self.io.setoutput(self.go_up, True)
             sleep(abs(movement))
             logging.debug('Set output %s False', self.go_up)
             self.io.setoutput(self.go_up, False)
 
-        elif position < self.databas[self.motor_name]['position']:
-            movement = position - self.databas[self.motor_name]['position']
+        elif position < self.databas['data'][self.motor_name]['position']:
+            movement = position - self.databas['data'][self.motor_name]['position']
             logging.debug('Set output %s True for %s seconds', self.go_up, abs(movement))
             self.io.setoutput(self.go_down, True)
             sleep(abs(movement))
             logging.debug('Set output %s False', self.go_down)
             self.io.setoutput(self.go_down, False)
 
-        databas_temp = self.databas[self.motor_name]
-        databas_temp['position'] = position
-        self.databas[self.motor_name] = databas_temp
+        else: 
+            return
+
+        self.databas['data'][self.motor_name]['position'] = position
+        self.databas['data'] = reassign(self.databas['data'])
         transaction.commit()
 
     def moverelativeposition(self, position, direction):
         if direction == 'up':
-            new_position = position + self.databas[self.motor_name]['position']
+            new_position = position + self.databas['data'][self.motor_name]['position']
         else:
-            new_position = position - self.databas[self.motor_name]['position']
+            new_position = position - self.databas['data'][self.motor_name]['position']
 
         self.moveabsoluteposition(new_position)
 
@@ -162,7 +165,6 @@ class webserver():
         @socketio.on('data_send', namespace='/test')
         def handle_client_connect_event(json):
             logging.debug('Webserver: Sparar JSON data: %s', json)
-            print(self.db1['data'])
             for key in json:
                 if type(json[key]) is dict:
                     for key2 in json[key]:
@@ -278,10 +280,10 @@ if __name__ == "__main__":
     try:
         root = database()
     
-        ###Uncomment to create databas###
+        ###updatencomment to create databas###
         #db = root.newconn()
         #createdatabas(db)
-        
+
         webserver = threading.Thread(target=webserver, args=(root.newconn(),root.newconn(),))
         #ventilationserver = threading.Thread(target=ventilationserver, args=(root.newconn(),))
         webserver.start()
