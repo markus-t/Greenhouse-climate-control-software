@@ -4,6 +4,7 @@ with warnings.catch_warnings():
     warnings.simplefilter("ignore", category=PendingDeprecationWarning)
     import revpimodio2
 from time import sleep, time
+import urllib.request 
 import threading
 from flask import Flask, render_template
 from flask_socketio import SocketIO
@@ -48,7 +49,7 @@ class ventmotor:
         self.io.setoutput(self.go_up, False)
 
         start_time = time()
-        sleep(1)
+        sleep(0.5)
         while self.io.getoutput(self.down_switch) == True:
             sleep(0.5)
             logging.debug('Ventmotor: testrange: down while sleep 0.5 sec')
@@ -63,17 +64,24 @@ class ventmotor:
         transaction.commit()
 
     def moveabsoluteposition(self, position):
+        movement = position - self.databas['data'][self.motor_name]['position']
         if position > self.databas['data'][self.motor_name]['position']:
-            movement = position - self.databas['data'][self.motor_name]['position']
             logging.debug('Set output %s True for %s seconds', self.go_up, abs(movement))
             self.io.setoutput(self.go_up, True)
-            sleep(abs(movement))
-            logging.debug('Set output %s False', self.go_up)
+            now = int(time())
+            endtime = int(time() + abs(movement))
+            while endtime > now:
+                sleep (0.1)
+                logging.debug('Sleeping')
+                now = int(time())
+                #if self.io.phasesequence():
+                #    return False
+
             self.io.setoutput(self.go_up, False)
+            logging.debug('Set output %s False', self.go_up)
 
         elif position < self.databas['data'][self.motor_name]['position']:
-            movement = position - self.databas['data'][self.motor_name]['position']
-            logging.debug('Set output %s True for %s seconds', self.go_up, abs(movement))
+            logging.debug('Set output %s True for %s seconds', self.go_down, abs(movement))
             self.io.setoutput(self.go_down, True)
             sleep(abs(movement))
             logging.debug('Set output %s False', self.go_down)
@@ -130,6 +138,11 @@ class io():
         elif output == 'I_4':
             return self.revpi.io.I_4.value
 
+    def phasesequence(self):
+        #True means phase sequence and loss monitoring ok.
+        self.revpi.readprocimg()
+        return self.revpi.io.I_9.value
+
 
 class tempregulator():
     def __init__(self, factor=1):
@@ -148,12 +161,29 @@ class tempregulator():
             self.direction = 'none'
             self.correction = 0
 
+class weatherserver(threading.Thread):
+    def __init__(self, db1):
+        threading.Thread.__init__(self)
+        self.db1 = db1
+        
+    def run(self):
+        while True:
+            with urllib.request.urlopen("https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/13.528156/lat/59.921701/data.json") as url:
+                data = json.loads(url.read().decode())
+                self.db1['data']['weather']['timestamp'] = data['timeSeries'][0]['validTime']
+                self.db1['data']['weather']['temperature'] = data['timeSeries'][0]['parameters'][1]['values'][0]
+                self.db1['data']['weather']['windspeed'] = data['timeSeries'][0]['parameters'][4]['values'][0]
+                self.db1['data']['weather']['winddirection'] = data['timeSeries'][0]['parameters'][3]['values'][0]
+                self.db1['data'] = reassign(self.db1['data'])
+                transaction.commit()
+            sleep(1000)
 
-class webserver():
+class webserver(threading.Thread):
     def __init__(self, db1, db2):
+        threading.Thread.__init__(self)
         self.db1 = db1
         self.db2 = db2
-        app = Flask(__name__)
+        app = Flask(__name__, static_url_path='/static')
         app.config['SECRET_KEY'] = 'secret!'
         socketio = SocketIO(app)
         self.socketio = socketio
@@ -161,6 +191,14 @@ class webserver():
         @app.route("/")
         def index():
             return render_template('index.html')
+
+        @app.route("/jquery.js")
+        def index2():
+            return render_template('jquery.js')
+
+        @app.route("/socket.io.min.js")
+        def index3():
+            return render_template('socket.io.min.js')
 
         @socketio.on('data_send', namespace='/test')
         def handle_client_connect_event(json):
@@ -220,24 +258,26 @@ class ventilationserver(threading.Thread):
         self.io = io()
 
     def run(self):
-        motornord = ventmotor('O_3', 'O_4', 'I_3', 'I_4', self.io, self.db2, 'motornord')
-        motorsyd = ventmotor('O_1', 'O_2', 'I_1', 'I_2', self.io, self.db2, 'motorsyd')
-
+        motorsyd = ventmotor('O_4', 'O_3', 'I_4', 'I_3', self.io, self.db2, 'motorsyd')
+        motornord = ventmotor('O_1', 'O_2', 'I_1', 'I_2', self.io, self.db2, 'motornord')
         regulator = tempregulator()
         while not self.shutdown_flag.is_set():
             if self.db2['data']['motornord']['ranger'] == 0:
                 motornord.testrange()
 
-            if self.db2['data']['motorsyd']['ranger'] == 0:
-                motorsyd.testrange()
+            #if self.db2['data']['motorsyd']['ranger'] == 0:
+            #    motorsyd.testrange()
 
             if self.db2['data']['VentAutSwitch'] == True:
                 regulator.update(23, self.db2['data']['TempSetPointDay'])
+                #if self.db2['data']['motorsyd']['ranger'] >
                 motornord.moverelativeposition(regulator.correction, regulator.direction)
                 logging.debug('Ventilatonserver: Automatiskt läge')
             else:
-                motornord.moveabsoluteposition(int(self.db2['data']['motornord']['movetoposition']))
-                motorsyd.moveabsoluteposition(int(self.db2['data']['motorsyd']['movetoposition']))
+                motornordposition = int(self.db2['data']['motornord']['movetoposition']) / 100 * self.db2['data']['motornord']['ranger']
+                motornord.moveabsoluteposition(int(motornordposition))
+                motorsydposition = int(self.db2['data']['motorsyd']['movetoposition']) / 100 * self.db2['data']['motorsyd']['ranger']
+                motorsyd.moveabsoluteposition(int(motorsydposition))
                 logging.debug('Ventilatonserver: Manuellt läge')
 
             sleep(3)
@@ -253,7 +293,7 @@ class ventilationserver(threading.Thread):
 
 def createdatabas(db):
     db['data'] = {  'TempSetPointDay': 20,
-                    'VentAutSwitch':   True,
+                    'VentAutSwitch':   False,
                     
                     'motorsyd': {    'position': 0, 
                                      'movetoposition': 0,
@@ -261,7 +301,12 @@ def createdatabas(db):
 
                     'motornord': {   'position': 0, 
                                      'movetoposition': 0,
-                                     'ranger': 0}
+                                     'ranger': 0},
+
+                    'weather':  {    'timestamp': 0,
+                                     'temperature': 0,
+                                     'windspeed': 0,
+                                     'winddirection': 0}
               }
     transaction.commit()
 
@@ -281,15 +326,17 @@ if __name__ == "__main__":
         root = database()
     
         ###updatencomment to create databas###
-        #db = root.newconn()
-        #createdatabas(db)
+        db = root.newconn()
+        createdatabas(db)
 
-        webserver = threading.Thread(target=webserver, args=(root.newconn(),root.newconn(),))
-        #ventilationserver = threading.Thread(target=ventilationserver, args=(root.newconn(),))
-        webserver.start()
-
-        ventilationserver = ventilationserver(root.newconn())
+        ventilationserver   = ventilationserver(root.newconn())        
         ventilationserver.start()
+
+        weatherserver       = weatherserver(root.newconn())
+        weatherserver.start()
+
+        webserver           = webserver(root.newconn(), root.newconn())
+        #webserver.start()
 
         while True:
             sleep(1)
