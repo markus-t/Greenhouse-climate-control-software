@@ -37,6 +37,12 @@
             socket.on('my_response', function(msg) {
               $('#motornordPosition').html(msg.motornord.position);
               $('#motorsydPosition').html(msg.motorsyd.position);
+              $('#temperature').html(msg.weather.temperature);
+              $('#deg').html(msg.deg);
+              $('#hum').html(msg.hum);
+              $('#lux').html(msg.lux);
+              $('#emit_data').val(msg.motornord.position);
+              $('#emit_data2').val(msg.motorsyd.position);               
             });
 
 
@@ -118,7 +124,7 @@ tbody tr:nth-child(odd) { background-color: #eee;  }
   .grid-container > div {
     text-align: left;
     padding: 0;
-    font-size: 15px;
+    font-size: 18px;
   }
   ul {
     list-style-type: none;
@@ -148,6 +154,21 @@ tbody tr:nth-child(odd) { background-color: #eee;  }
   }
 
   li a:hover {   background-color: #111;}
+
+
+
+input[type='checkbox'] {
+    -webkit-appearance:none;
+    width:25px;
+    height:25px;
+    background:black;
+    border-radius:5px;
+    border:2px solid #fff;
+}
+input[type='checkbox']:checked {
+    background: #abd;
+}
+  
 </style>
 </head>
 <body>
@@ -225,12 +246,12 @@ tbody tr:nth-child(odd) { background-color: #eee;  }
           </tr>
           <tr>
             <td>Luftemperatur ute</td>
-            <td>1 &deg;C</td>
+            <td><span id="temperature"></span> &deg;C</td>
             <td></td>
           </tr>
           <tr>
-            <td>Luftemperatur växthus</td>
-            <td>22 &deg;C</td>
+            <td >Luftemperatur växthus</td>
+            <td><span id="deg"></span> &deg;C</td>
             <td></td>
           </tr>
           <tr>
@@ -243,6 +264,16 @@ tbody tr:nth-child(odd) { background-color: #eee;  }
             <td>0.0mm/h</td>
             <td></td>
           </tr>
+          <tr>
+            <td>Ljusnivå</td>
+            <td><span id="lux"></span> Lux</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>Luftfuktighet</td>
+            <td><span id="hum"></span> %RF</td>
+            <td></td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -251,8 +282,7 @@ tbody tr:nth-child(odd) { background-color: #eee;  }
 
         <tr>
           <th>Egenskap</th>
-          <th>Ändra</th>
-          <th>Nuvarande värde</th>
+          <th width="50%">Ändra</th>
         </tr>
         <tr>
           <td>Ventilationsautomatik på/av</td>
@@ -261,27 +291,24 @@ tbody tr:nth-child(odd) { background-color: #eee;  }
               <input type="checkbox" value="True" id="data" name="emit_data">
             </form>
           </td>
-          <td></td>
         </tr>
         <tr class="vent">
           <td>&nbsp;&nbsp;Ventilation Nord</td>
           <td>
             <form id="ventnord" method="POST" action="#">
-              <input type="range" min="1" max="100" value="0" class="slider" id="emit_data" name="emit_data" oninput="updateRangeInput(this)" >
+              <input type="range" min="0" max="100" value="0" class="slider" id="emit_data" name="emit_data" oninput="updateRangeInput(this)" >
               <output type="text" value="8">0</output>%
             </form>
           </td>
-          <td>0%</td>
         </tr>
         <tr class="vent">
           <td>&nbsp;&nbsp;Ventilation Syd</td>
           <td>
             <form id="ventsyd" method="POST" action="#">
-              <input type="range" min="1" max="100" value="33" class="slider" id="emit_data2" oninput="updateRangeInput(this)">
+              <input type="range" min="0" max="100" value="0" class="slider" id="emit_data2" oninput="updateRangeInput(this)">
               <output type="text" value="8">33</output>%
             </form>
           </td>
-          <td>15%</td>
         </tr>
         <tr>
           <td>Temperatur börvärde dag</td>
@@ -291,22 +318,18 @@ tbody tr:nth-child(odd) { background-color: #eee;  }
               <output type="text" value="8">20</output> &deg;C
             </form>
           </td>
-          <td>20 &deg;C</td>
         </tr>
         <tr>
           <td>Temperatur börvärde natt</td>
           <td><input type="range" min="1" max="30" value="18" class="slider" id="myRange" oninput="updateRangeInput(this)" ><output type="text" value="8">18</output> &deg;C</td>
-          <td>18 &deg;C</td>
         </tr>
         <tr>
           <td>Starttemperatur Värmetillskott</td>
           <td><input type="range" min="-15" max="30" value="8" class="slider" id="myRange" oninput="updateRangeInput(this)"><output type="text" value="8">8</output> &deg;C</td>
-          <td>23 &deg;C</td>
         </tr>
         <tr>
           <td>Värmetillskott av/på</td>
           <td><input type="checkbox" checked="checked"></td>
-          <td>    <div id="log"></div></td>
         </tr>
       </table>
     </div>

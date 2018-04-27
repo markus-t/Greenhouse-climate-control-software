@@ -99,6 +99,12 @@ class ventmotor:
             new_position = position + self.databas['data'][self.motor_name]['position']
         else:
             new_position = position - self.databas['data'][self.motor_name]['position']
+            
+        #quick windup fix
+        if new_position > self.databas['data'][self.motor_name]['ranger']:
+            new_position = self.databas['data'][self.motor_name]['ranger']
+        if new_position < 0:
+            new_position = 0
 
         self.moveabsoluteposition(new_position)
 
@@ -137,6 +143,13 @@ class io():
             return self.revpi.io.I_3.value
         elif output == 'I_4':
             return self.revpi.io.I_4.value
+        elif output == 'deg':
+            return int((self.revpi.io.Input_Word_2.value / 10) - (self.revpi.io.Input_Word_1.value / 1000))
+        elif output == 'lux':
+            return self.revpi.io.Input_Word_1.value / 10
+        elif output == 'hum':
+            return int(self.revpi.io.Input_Word_3.value / 10)
+
 
     def phasesequence(self):
         #True means phase sequence and loss monitoring ok.
@@ -145,7 +158,7 @@ class io():
 
 
 class tempregulator():
-    def __init__(self, factor=1):
+    def __init__(self, factor=4):
         self.setpoint = 1
         self.correction = 0
         self.direction = 'none'
@@ -171,12 +184,28 @@ class weatherserver(threading.Thread):
             with urllib.request.urlopen("https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/13.528156/lat/59.921701/data.json") as url:
                 data = json.loads(url.read().decode())
                 self.db1['data']['weather']['timestamp'] = data['timeSeries'][0]['validTime']
-                self.db1['data']['weather']['temperature'] = data['timeSeries'][0]['parameters'][1]['values'][0]
-                self.db1['data']['weather']['windspeed'] = data['timeSeries'][0]['parameters'][4]['values'][0]
+                self.db1['data']['weather']['temperature'] = data['timeSeries'][0]['parameters'][11]['values'][0]
+                self.db1['data']['weather']['windspeed'] = data['timeSeries'][0]['parameters'][17]['values'][0]
                 self.db1['data']['weather']['winddirection'] = data['timeSeries'][0]['parameters'][3]['values'][0]
                 self.db1['data'] = reassign(self.db1['data'])
                 transaction.commit()
             sleep(1000)
+
+class sensorsync(threading.Thread):
+    def __init__(self, db1, io):
+        threading.Thread.__init__(self)
+        self.db1 = db1
+        self.io = io
+        
+    def run(self):
+        while True:
+                logging.debug('Sensorsync: sync')
+                self.db1['data']['lux'] = self.io.getoutput('lux')
+                self.db1['data']['hum'] = self.io.getoutput('hum')
+                self.db1['data']['deg'] = self.io.getoutput('deg')
+                self.db1['data'] = reassign(self.db1['data'])
+                transaction.commit()
+                sleep(30)
 
 class webserver(threading.Thread):
     def __init__(self, db1, db2):
@@ -269,7 +298,8 @@ class ventilationserver(threading.Thread):
             #    motorsyd.testrange()
 
             if self.db2['data']['VentAutSwitch'] == True:
-                regulator.update(23, self.db2['data']['TempSetPointDay'])
+                sleep(55)
+                regulator.update(self.io.getoutput('deg'), self.db2['data']['TempSetPointDay'])
                 #if self.db2['data']['motorsyd']['ranger'] >
                 motornord.moverelativeposition(regulator.correction, regulator.direction)
                 logging.debug('Ventilatonserver: Automatiskt läge')
@@ -279,8 +309,9 @@ class ventilationserver(threading.Thread):
                 motorsydposition = int(self.db2['data']['motorsyd']['movetoposition']) / 100 * self.db2['data']['motorsyd']['ranger']
                 motorsyd.moveabsoluteposition(int(motorsydposition))
                 logging.debug('Ventilatonserver: Manuellt läge')
+            print(self.io.getoutput('deg'))
 
-            sleep(3)
+            sleep(1)
 
         
         print('Setting output to default values')
@@ -292,8 +323,11 @@ class ventilationserver(threading.Thread):
 
 
 def createdatabas(db):
-    db['data'] = {  'TempSetPointDay': 20,
+    db['data'] = {  'TempSetPointDay': 26,
                     'VentAutSwitch':   False,
+                    'deg' : 0,
+                    'hum': 0,
+                    'lux': 0,
                     
                     'motorsyd': {    'position': 0, 
                                      'movetoposition': 0,
@@ -301,7 +335,7 @@ def createdatabas(db):
 
                     'motornord': {   'position': 0, 
                                      'movetoposition': 0,
-                                     'ranger': 0},
+                                     'ranger': 129},
 
                     'weather':  {    'timestamp': 0,
                                      'temperature': 0,
@@ -335,6 +369,9 @@ if __name__ == "__main__":
         weatherserver       = weatherserver(root.newconn())
         weatherserver.start()
 
+        sensorsync       = sensorsync(root.newconn(), io())
+        sensorsync.start()
+
         webserver           = webserver(root.newconn(), root.newconn())
         #webserver.start()
 
@@ -346,26 +383,4 @@ if __name__ == "__main__":
         ventilationserver.join()
 
 
-    #db1 = root.newconn()
-    #db1_temp = {}
-    #while 1:
-    #    sleep(10)
-    #    db1_temp['data'] = db1['data']
-    #    db1_temp['data']['TempSetPoint'] = 25
-    #    db1['data'] = db1_temp['data']
-    #    transaction.commit()
-    #    sleep(10)
-    #    db1_temp['data'] = db1['data']
-    #    db1_temp['data']['TempSetPoint'] = 27
-    #    db1['data'] = db1_temp['data']
-    #    transaction.commit()
-    #    sleep(10)
-    #    db1_temp['data'] = db1['data']
-    #    db1_temp['data']['TempSetPoint'] = 18
-    #    db1['data'] = db1_temp['data']
-    #    transaction.commit()
-    #    sleep(10)
-    #    db1_temp['data'] = db1['data']
-    #    db1_temp['data']['TempSetPoint'] = 19
-    #    db1['data'] = db1_temp['data']
-    #    transaction.commit()
+
