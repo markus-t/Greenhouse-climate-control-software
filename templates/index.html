@@ -8,9 +8,14 @@
   <script defer src="https://use.fontawesome.com/releases/v5.0.0/js/all.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="jquery.js"></script>
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
 <script type="text/javascript" src="socket.io.min.js"></script>
   <script type="text/javascript" charset="utf-8">
+
+    
     $(document).ready(function() {
+
             // Use a "/test" namespace.
             // An application can open a connection on multiple namespaces, and
             // Socket.IO will multiplex all those connections on a single
@@ -41,8 +46,15 @@
               $('#deg').html(msg.deg);
               $('#hum').html(msg.hum);
               $('#lux').html(msg.lux);
-              $('#emit_data').val(msg.motornord.position);
-              $('#emit_data2').val(msg.motorsyd.position);               
+              $('#emit_data').val(msg.motornord.movetoposition);               
+              $('#emit_data2').val(msg.motorsyd.movetoposition); 
+              if ( msg.motorsyd.confirm == 'confirm' ) {
+                dialog_ventsyd.dialog("open");
+              } 
+              if ( msg.motornord.confirm == 'confirm' ) {
+                dialog_ventnord.dialog("open");
+              }
+              
             });
 
 
@@ -67,7 +79,7 @@
               return false;
             });
             $('form#tempsetpointnight').change(function(event) {
-              socket.emit('data_send', {tempsetpointnight: $('#d').val()});
+              socket.emit('data_send', {tempsetpointnight: $('#d2').val()});
               return false;
             });
             $('form#heatersetpoint').change(function(event) {
@@ -78,7 +90,46 @@
               socket.emit('data_send', {heaterswitch: $('#emit_data').val()});
               return false;
             });
-          });
+
+
+            dialog_ventnord = $( "#dialog-confirm-ventnord" ).dialog({
+              autoOpen: false,
+              resizable: false,
+              height: "auto",
+              width: 400,
+              modal: true,
+              buttons: {
+                Ja: function() {
+                  $( this ).dialog( "close" );
+                  socket.emit('data_send', {motornord: {confirm: 'ja'}});
+                },
+                Nej: function() {
+                  $( this ).dialog( "close" );
+                }
+              }
+            });
+
+            dialog_ventsyd = $( "#dialog-confirm-ventsyd" ).dialog({
+              autoOpen: false,
+              resizable: false,
+              height: "auto",
+              width: 400,
+              modal: true,
+              buttons: {
+                Ja: function() {
+                  $( this ).dialog( "close" );
+                  socket.emit('data_send', {motorsyd: {confirm: 'ja'}});
+                },
+                Nej: function() {
+                  $( this ).dialog( "close" );
+                }
+              }
+            });
+      });
+
+
+
+
 
 
     $(function() {
@@ -92,18 +143,23 @@
 
 
     function updateRangeInput(elem) {
-      $(elem).next().val($(elem).val());
+      $(elem).next().next().val($(elem).val());
     }
 
   </script>
   <style>
   input { border: 1px solid #ddd; color: #555;}
 tbody tr:nth-child(odd) { background-color: #eee;  }
+td:nth-child(2) { width: 100%; }
+td:nth-child(1)  {white-space: nowrap;}
+td:nth-child(3) { white-space: nowrap; }
 
   table {
     width: 100%;
     border-spacing: 0;
   }
+
+
 
   .content { display:none;}
   .item1 { grid-area: header; }
@@ -167,6 +223,51 @@ input[type='checkbox'] {
 }
 input[type='checkbox']:checked {
     background: #abd;
+}
+
+input[type=range] {
+  margin: 1px 0;
+  width: 100%;
+}
+  
+/*Chrome*/
+@media screen and (-webkit-min-device-pixel-ratio:0) {
+    input[type='range'] {
+      overflow: hidden;
+      -webkit-appearance: none;
+      background-color: #9a905d;
+    }
+    
+    input[type='range']::-webkit-slider-runnable-track {
+      height: 10px;
+      -webkit-appearance: none;
+      color: #13bba4;
+      margin-top: -1px;
+    }
+    
+    input[type='range']::-webkit-slider-thumb {
+      width: 10px;
+      -webkit-appearance: none;
+      height: 10px;
+      cursor: ew-resize;
+      background: #434343;
+      box-shadow: -80px 0 0 80px #43e5f7;
+    }
+
+}
+/** FF*/
+input[type="range"]::-moz-range-progress {
+  background-color: #0A0; 
+}
+input[type="range"]::-moz-range-track {  
+  background-color: #CCC;
+}
+/* IE*/
+input[type="range"]::-ms-fill-lower {
+  background-color: #0A0; 
+}
+input[type="range"]::-ms-fill-upper {  
+  background-color: #CCC;
 }
   
 </style>
@@ -279,10 +380,10 @@ input[type='checkbox']:checked {
     </div>
     <div id="vv" class="item2 content">
       <table>
-
         <tr>
           <th>Egenskap</th>
-          <th width="50%">Ändra</th>
+          <th >Ändra</th>
+          <th >Värde</th>
         </tr>
         <tr>
           <td>Ventilationsautomatik på/av</td>
@@ -291,49 +392,60 @@ input[type='checkbox']:checked {
               <input type="checkbox" value="True" id="data" name="emit_data">
             </form>
           </td>
+          <td></td>
         </tr>
         <tr class="vent">
-          <td>&nbsp;&nbsp;Ventilation Nord</td>
-          <td>
+          <td>&nbsp;&nbsp;&gt;&gt;&nbsp;&nbsp;Ventilation Nord</td>
+          <td >
             <form id="ventnord" method="POST" action="#">
-              <input type="range" min="0" max="100" value="0" class="slider" id="emit_data" name="emit_data" oninput="updateRangeInput(this)" >
-              <output type="text" value="8">0</output>%
+              <input type="range" min="0" max="100" value="0" class="slider" id="emit_data" oninput="updateRangeInput(this)">
+              
             </form>
           </td>
+          <td><output type="text" value="8">0</output>%</td>
         </tr>
         <tr class="vent">
-          <td>&nbsp;&nbsp;Ventilation Syd</td>
+          <td>&nbsp;&nbsp;&gt;&gt;&nbsp;&nbsp;Ventilation Syd</td>
           <td>
             <form id="ventsyd" method="POST" action="#">
               <input type="range" min="0" max="100" value="0" class="slider" id="emit_data2" oninput="updateRangeInput(this)">
-              <output type="text" value="8">33</output>%
             </form>
           </td>
+          <td><output type="text" value="8">33</output>%</td>
         </tr>
         <tr>
           <td>Temperatur börvärde dag</td>
           <td>
             <form id="tempsetpointday" method="POST" action="#">
               <input type="range" min="1" max="30" value="20" class="slider" id="d" oninput="updateRangeInput(this)">
-              <output type="text" value="8">20</output> &deg;C
+              
             </form>
           </td>
+          <td><output type="text" value="8">20</output> &deg;C</td>
         </tr>
         <tr>
           <td>Temperatur börvärde natt</td>
-          <td><input type="range" min="1" max="30" value="18" class="slider" id="myRange" oninput="updateRangeInput(this)" ><output type="text" value="8">18</output> &deg;C</td>
+          <td><input type="range" min="1" max="30" value="18" class="slider" id="myRange" oninput="updateRangeInput(this)" ></td>
+          <td><output type="text" value="8">18</output> &deg;C</td>
         </tr>
         <tr>
           <td>Starttemperatur Värmetillskott</td>
-          <td><input type="range" min="-15" max="30" value="8" class="slider" id="myRange" oninput="updateRangeInput(this)"><output type="text" value="8">8</output> &deg;C</td>
+          <td><input type="range" min="-15" max="30" value="8" class="slider" id="myRange" oninput="updateRangeInput(this)"></td>
+          <td><output type="text" value="8">8</output> &deg;C</td>
         </tr>
         <tr>
           <td>Värmetillskott av/på</td>
           <td><input type="checkbox" checked="checked"></td>
+          <td></td>
         </tr>
       </table>
     </div>
   </div>
-
+<div id="dialog-confirm-ventnord" title="Beräkningsfel">
+  <p><span class="ui-icon ui-icon-alert" style="float:left; margin:12px 12px 20px 0;"></span>Är motor nord i helt nedstängt läge?</p>
+</div>
+<div id="dialog-confirm-ventsyd" title="Beräkningsfel">
+  <p><span class="ui-icon ui-icon-alert" style="float:left; margin:12px 12px 20px 0;"></span>Är motor syd i helt nedstängt läge?</p>
+</div>
 </body>
 </html>

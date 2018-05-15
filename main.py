@@ -23,6 +23,8 @@ def reassign(ordbok):
     temp = ordbok
     return temp
 
+def cyclewait():
+    sleep(0.2)
 
 class ventmotor:
     def __init__(self, go_up, go_down, up_switch, down_switch, io, db2, motor_name):
@@ -34,6 +36,8 @@ class ventmotor:
         self.motor_name = motor_name
         self.io = io
         self.rangemargin = 1
+        self.mem_go_up = True
+        self.mem_go_down = True
 
     def testrange(self):
         self.io.setoutput(self.go_down, False)
@@ -63,36 +67,109 @@ class ventmotor:
         self.databas['data'] = reassign(self.databas['data'])
         transaction.commit()
 
-    def moveabsoluteposition(self, position):
-        movement = position - self.databas['data'][self.motor_name]['position']
-        if position > self.databas['data'][self.motor_name]['position']:
-            logging.debug('Set output %s True for %s seconds', self.go_up, abs(movement))
-            self.io.setoutput(self.go_up, True)
-            now = int(time())
-            endtime = int(time() + abs(movement))
-            while endtime > now:
-                sleep (0.1)
-                logging.debug('Sleeping')
-                now = int(time())
-                #if self.io.phasesequence():
-                #    return False
+    def reinit(self):
+        self.io.setoutput(self.go_down, True) 
+        self.io.setoutput(self.go_up, False)  
+        cyclewait()      
+        while self.io.getoutput(self.down_switch) == True:
+            sleep(0.5)
+            logging.debug('Ventmotor: reinit, go down')
 
-            self.io.setoutput(self.go_up, False)
-            logging.debug('Set output %s False', self.go_up)
+        self.io.setoutput(self.go_down, False) 
+        self.io.setoutput(self.go_up, False)
 
-        elif position < self.databas['data'][self.motor_name]['position']:
-            logging.debug('Set output %s True for %s seconds', self.go_down, abs(movement))
-            self.io.setoutput(self.go_down, True)
-            sleep(abs(movement))
-            logging.debug('Set output %s False', self.go_down)
-            self.io.setoutput(self.go_down, False)
-
-        else: 
-            return
-
-        self.databas['data'][self.motor_name]['position'] = position
+        self.databas['data'][self.motor_name]['confirm'] = 'confirm'
         self.databas['data'] = reassign(self.databas['data'])
         transaction.commit()
+
+        while self.databas['data'][self.motor_name]['confirm'] != 'ja':
+            sleep(1)
+            logging.debug('Waiting for user input')
+
+
+    def moveabsoluteposition(self, position):
+        movement = position - self.databas['data'][self.motor_name]['position']
+
+        if position > self.databas['data'][self.motor_name]['ranger']:
+            logging.debug('Position higher than range')
+            return False
+
+        if position < 0:
+            logging.debug('Position lower than range')
+            return False
+            
+        if self.databas['data'][self.motor_name]['halt'] is True:
+            logging.debug('Motor halt')
+            return False
+
+        if (position - 1) > self.databas['data'][self.motor_name]['position']:
+            go_up = True
+            go_down = False
+
+            if self.mem_go_up is False:
+                logging.debug('Upgoing moment switch fail')
+                return False
+                
+            logging.debug('Set output %s True for %s seconds', self.go_up, abs(movement))
+            self.io.setoutput(self.go_up, True)
+
+        elif (position + 1) < self.databas['data'][self.motor_name]['position']:
+            go_down = True
+            go_up = False
+            logging.debug('Set output %s True for %s seconds', self.go_down, abs(movement))
+            self.io.setoutput(self.go_down, True)
+
+        else:
+            logging.debug('To small adjustment')
+            return False
+        
+        endtime = time() + abs(movement)
+        now = time()
+
+        sleep(0.1)
+
+        while True:
+            sleep (0.02)
+            logging.debug('Sleeping 0.02')
+                  
+            if endtime < time():
+                logging.debug('Finished running motor')
+                break
+
+            if self.io.phasesequence() is True:
+                logging.debug('Phasesequence fail')
+                break
+
+            if self.io.getoutput(self.up_switch) is False and go_up is True:
+                self.mem_go_up = False
+                self.mem_go_down = True
+                logging.debug('Up moment switch fail')
+                break
+
+            if self.io.getoutput(self.down_switch) is False and go_down is True:
+                if 5 > self.databas['data'][self.motor_name]['position']:
+                    logging.debug('Down Moment switch on, small error, reseting')
+                    self.databas['data'][self.motor_name]['position'] = 0
+                else:
+                    logging.debug('Down Moment switch on, large error, halt')
+                    self.databas['data'][self.motor_name]['halt'] = True
+
+        if go_up is True:
+            logging.debug('Set output %s False for %s seconds', self.go_up, abs(movement))
+            new_position = self.databas['data'][self.motor_name]['position'] + int(time()) - now
+            self.io.setoutput(self.go_up, False)
+            
+        elif go_down is True:
+            logging.debug('Set output %s False for %s seconds', self.go_down, abs(movement))
+            self.io.setoutput(self.go_down, False)
+            new_position = self.databas['data'][self.motor_name]['position'] + int(time()) - now
+        else:
+            return
+
+        self.databas['data'][self.motor_name]['position'] = new_position
+        self.databas['data'] = reassign(self.databas['data'])
+        transaction.commit()
+
 
     def moverelativeposition(self, position, direction):
         if direction == 'up':
@@ -126,9 +203,15 @@ class io():
             return
             
         if value == True:
-            self.revpi.core.A1 = revpimodio2.RED
+            if output == 'O_1' or output == 'O_2':
+                self.revpi.core.A1 = revpimodio2.RED
+            else:
+                self.revpi.core.A2 = revpimodio2.RED
         else:
-            self.revpi.core.A1 = revpimodio2.GREEN
+            if output == 'O_1' or output == 'O_2':
+                self.revpi.core.A1 = revpimodio2.GREEN
+            else:
+                self.revpi.core.A2 = revpimodio2.GREEN
 
         self.revpi.writeprocimg()
 
@@ -144,7 +227,7 @@ class io():
         elif output == 'I_4':
             return self.revpi.io.I_4.value
         elif output == 'deg':
-            return int((self.revpi.io.Input_Word_2.value / 10) - (self.revpi.io.Input_Word_1.value / 1000))
+            return int(self.revpi.io.Input_Word_2.value / 10)
         elif output == 'lux':
             return self.revpi.io.Input_Word_1.value / 10
         elif output == 'hum':
@@ -177,6 +260,7 @@ class tempregulator():
 class weatherserver(threading.Thread):
     def __init__(self, db1):
         threading.Thread.__init__(self)
+        self.daemon = True
         self.db1 = db1
         
     def run(self):
@@ -194,6 +278,7 @@ class weatherserver(threading.Thread):
 class sensorsync(threading.Thread):
     def __init__(self, db1, io):
         threading.Thread.__init__(self)
+        self.daemon = True
         self.db1 = db1
         self.io = io
         
@@ -210,6 +295,7 @@ class sensorsync(threading.Thread):
 class webserver(threading.Thread):
     def __init__(self, db1, db2):
         threading.Thread.__init__(self)
+        self.daemon = True
         self.db1 = db1
         self.db2 = db2
         app = Flask(__name__, static_url_path='/static')
@@ -252,8 +338,8 @@ class webserver(threading.Thread):
 
         self.thread = socketio.start_background_task(target=self.push_updates_thread)
 
+
         socketio.run(app, host='0.0.0.0', port=5000)
-    
 
 
     def push_updates_thread(self):
@@ -287,31 +373,35 @@ class ventilationserver(threading.Thread):
         self.io = io()
 
     def run(self):
-        motorsyd = ventmotor('O_4', 'O_3', 'I_4', 'I_3', self.io, self.db2, 'motorsyd')
+        motorsyd = ventmotor('O_3', 'O_4', 'I_3', 'I_4', self.io, self.db2, 'motorsyd')
         motornord = ventmotor('O_1', 'O_2', 'I_1', 'I_2', self.io, self.db2, 'motornord')
         regulator = tempregulator()
+        motorsyd.reinit()
+        motornord.reinit()
+        
         while not self.shutdown_flag.is_set():
-            if self.db2['data']['motornord']['ranger'] == 0:
-                motornord.testrange()
-
+            #if self.db2['data']['motornord']['ranger'] == 0:
+            #    motornord.testrange()
             #if self.db2['data']['motorsyd']['ranger'] == 0:
             #    motorsyd.testrange()
+            
 
-            if self.db2['data']['VentAutSwitch'] == True:
-                sleep(55)
-                regulator.update(self.io.getoutput('deg'), self.db2['data']['TempSetPointDay'])
-                #if self.db2['data']['motorsyd']['ranger'] >
-                motornord.moverelativeposition(regulator.correction, regulator.direction)
-                logging.debug('Ventilatonserver: Automatiskt läge')
+            if self.db2['data']['VentAutSwitch'] is True:
+                time_u = time()
+                while self.db2['data']['VentAutSwitch'] is True:
+                    if time_u + 55 < time():
+                        regulator.update(self.io.getoutput('deg'), self.db2['data']['TempSetPointDay'])
+                        motornord.moverelativeposition(regulator.correction, regulator.direction)
+                        time_u = time()
+                    logging.debug('Ventilatonserver: Automatiskt läge')
+                    sleep(1)
             else:
                 motornordposition = int(self.db2['data']['motornord']['movetoposition']) / 100 * self.db2['data']['motornord']['ranger']
                 motornord.moveabsoluteposition(int(motornordposition))
                 motorsydposition = int(self.db2['data']['motorsyd']['movetoposition']) / 100 * self.db2['data']['motorsyd']['ranger']
                 motorsyd.moveabsoluteposition(int(motorsydposition))
                 logging.debug('Ventilatonserver: Manuellt läge')
-            print(self.io.getoutput('deg'))
-
-            sleep(1)
+                sleep(1)
 
         
         print('Setting output to default values')
@@ -319,11 +409,11 @@ class ventilationserver(threading.Thread):
         modio.setdefaultvalues()
         modio.writeprocimg()
         
-        logging.debug('Ventilatonserver: Avslutar')
+        logging.debug('Ventilatonserver: Avslutad')
 
 
 def createdatabas(db):
-    db['data'] = {  'TempSetPointDay': 26,
+    db['data'] = {  'TempSetPointDay': 22,
                     'VentAutSwitch':   False,
                     'deg' : 0,
                     'hum': 0,
@@ -331,11 +421,15 @@ def createdatabas(db):
                     
                     'motorsyd': {    'position': 0, 
                                      'movetoposition': 0,
-                                     'ranger': 0},
+                                     'halt': False,
+                                     'confirm': 'nej',
+                                     'ranger': 160},
 
                     'motornord': {   'position': 0, 
                                      'movetoposition': 0,
-                                     'ranger': 129},
+                                     'halt': False,
+                                     'confirm': 'nej',
+                                     'ranger': 160},
 
                     'weather':  {    'timestamp': 0,
                                      'temperature': 0,
@@ -373,7 +467,7 @@ if __name__ == "__main__":
         sensorsync.start()
 
         webserver           = webserver(root.newconn(), root.newconn())
-        #webserver.start()
+        webserver.start()
 
         while True:
             sleep(1)
