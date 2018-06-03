@@ -15,6 +15,9 @@ import logging, sys
 from pprint import pprint
 import signal
 from copy import deepcopy
+from multiprocessing import Process, Queue
+import os
+from queue import Empty
 
 logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 
@@ -38,6 +41,7 @@ class ventmotor:
         self.rangemargin = 1
         self.mem_go_up = True
         self.mem_go_down = True
+        global queue
 
     def testrange(self):
         self.io.setoutput(self.go_down, False)
@@ -111,12 +115,14 @@ class ventmotor:
                 return False
                 
             logging.debug('Set output %s True for %s seconds', self.go_up, abs(movement))
+            queue.put(time())
             self.io.setoutput(self.go_up, True)
 
         elif (position + 1) < self.databas['data'][self.motor_name]['position']:
             go_down = True
             go_up = False
             logging.debug('Set output %s True for %s seconds', self.go_down, abs(movement))
+            queue.put([time(), True])
             self.io.setoutput(self.go_down, True)
 
         else:
@@ -130,7 +136,8 @@ class ventmotor:
 
         while True:
             sleep (0.02)
-            logging.debug('Sleeping 0.02')
+            #logging.debug('Sleeping 0.02')
+            queue.put([time(), True])
                   
             if endtime < time():
                 logging.debug('Finished running motor')
@@ -147,24 +154,29 @@ class ventmotor:
                 break
 
             if self.io.getoutput(self.down_switch) is False and go_down is True:
-                if 5 > self.databas['data'][self.motor_name]['position']:
+                if 5 > self.databas['data'][self.motor_name]['position'] - (time() - now):
                     logging.debug('Down Moment switch on, small error, reseting')
                     self.databas['data'][self.motor_name]['position'] = 0
                 else:
                     logging.debug('Down Moment switch on, large error, halt')
                     self.databas['data'][self.motor_name]['halt'] = True
+                break
 
         if go_up is True:
             logging.debug('Set output %s False for %s seconds', self.go_up, abs(movement))
-            new_position = self.databas['data'][self.motor_name]['position'] + int(time()) - now
+            new_position = self.databas['data'][self.motor_name]['position'] + (time() - now)
             self.io.setoutput(self.go_up, False)
             
         elif go_down is True:
             logging.debug('Set output %s False for %s seconds', self.go_down, abs(movement))
             self.io.setoutput(self.go_down, False)
-            new_position = self.databas['data'][self.motor_name]['position'] + int(time()) - now
+            if self.databas['data'][self.motor_name]['position'] is not 0:
+                new_position = self.databas['data'][self.motor_name]['position'] - (time() - now)
+            else:
+                new_position = 0
         else:
             return
+        queue.put([time(), False])
 
         self.databas['data'][self.motor_name]['position'] = new_position
         self.databas['data'] = reassign(self.databas['data'])
@@ -177,7 +189,6 @@ class ventmotor:
         else:
             new_position = position - self.databas['data'][self.motor_name]['position']
             
-        #quick windup fix
         if new_position > self.databas['data'][self.motor_name]['ranger']:
             new_position = self.databas['data'][self.motor_name]['ranger']
         if new_position < 0:
@@ -199,6 +210,14 @@ class io():
             self.revpi.io.O_3.value = value
         elif output == 'O_4':
             self.revpi.io.O_4.value = value
+        elif output == 'W1':
+            self.revpi.io.O_11.value = value
+        elif output == 'W2':
+            self.revpi.io.O_12.value = value
+        elif output == 'H':
+            self.revpi.io.O_13.value = value
+        elif output == 'L':
+            self.revpi.io.O_14.value = value
         else:
             return
             
@@ -226,6 +245,10 @@ class io():
             return self.revpi.io.I_3.value
         elif output == 'I_4':
             return self.revpi.io.I_4.value
+        elif output == 'O_1':
+            return self.revpi.io.O_1.value
+        elif output == 'O_3':
+            return self.revpi.io.O_3.value
         elif output == 'deg':
             return int(self.revpi.io.Input_Word_2.value / 10)
         elif output == 'lux':
@@ -376,9 +399,9 @@ class ventilationserver(threading.Thread):
         motorsyd = ventmotor('O_3', 'O_4', 'I_3', 'I_4', self.io, self.db2, 'motorsyd')
         motornord = ventmotor('O_1', 'O_2', 'I_1', 'I_2', self.io, self.db2, 'motornord')
         regulator = tempregulator()
+        
         motorsyd.reinit()
         motornord.reinit()
-        
         while not self.shutdown_flag.is_set():
             #if self.db2['data']['motornord']['ranger'] == 0:
             #    motornord.testrange()
@@ -403,6 +426,13 @@ class ventilationserver(threading.Thread):
                 logging.debug('Ventilatonserver: Manuellt läge')
                 sleep(1)
 
+            if int(self.db2['data']['TempSetPointHeater']) < self.db2['data']['deg']:
+                print('Setting heater on')
+                self.io.setoutput('H', True)
+            elif int(self.db2['data']['TempSetPointHeater']) + 1 > self.db2['data']['deg']:
+                print('Setting heater off')
+                self.io.setoutput('H', False)              
+
         
         print('Setting output to default values')
         modio = revpimodio2.RevPiModIO(autorefresh=False)
@@ -414,6 +444,7 @@ class ventilationserver(threading.Thread):
 
 def createdatabas(db):
     db['data'] = {  'TempSetPointDay': 22,
+                    'TempSetPointHeater': 10,
                     'VentAutSwitch':   False,
                     'deg' : 0,
                     'hum': 0,
@@ -445,10 +476,14 @@ def signal_handler(signum, frame):
 class serviceexit(Exception):
     pass
 
-
-if __name__ == "__main__":
+def runner(queue):
+    os.nice(5)
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
+    global ventilationserver
+    global weatherserver
+    global sensorsync
+    global webserver
 
     try:
         root = database()
@@ -475,6 +510,39 @@ if __name__ == "__main__":
     except serviceexit:
         ventilationserver.shutdown_flag.set()
         ventilationserver.join()
+
+
+if __name__ == "__main__":
+    queue = Queue()
+    runner = Process(target=runner, args=((queue),))
+    runner.start()
+
+    while True:
+        print('Vakthund: Börjar om')
+
+        try:
+            item = queue.get(timeout=1)
+            logging.info("Vakthund: Ingen körning meddelad")
+            
+        except Exception as error:
+            logging.info("Vakthund: Timeout {}".format(str(error)))
+
+        if item is not None:
+                break
+            if item[1] is True and item[0] + 3 < time():
+                print('Vakthund: Mer än 3 sekunder sen')
+                runner.terminate()
+                modio = revpimodio2.RevPiModIO(autorefresh=False)
+                modio.setdefaultvalues()
+                modio.writeprocimg()
+                while True:
+                    sleep(1)
+                    logging.debug('Process avslutad')
+            else:
+                print('Vakthund: I tid eller körning pågår ej')
+
+        sleep(0.01)
+
 
 
 
