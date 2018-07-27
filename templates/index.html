@@ -7,10 +7,13 @@
   <!--<link rel="stylesheet" type="test/css" href="style.css">-->
   <script defer src="https://use.fontawesome.com/releases/v5.0.0/js/all.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src="jquery.js"></script>
-    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
-<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
-<script type="text/javascript" src="socket.io.min.js"></script>
+  <script src="static/jquery.js"></script>
+  <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+  <link rel="stylesheet" href="static/jquery-clockpicker.css">
+  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+  <script type="text/javascript" src="static/socket.io.min.js"></script>
+  <script type="text/javascript" src="static/jquery-clockpicker.js"></script>
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
   <script type="text/javascript" charset="utf-8">
 
     
@@ -54,6 +57,10 @@
               if ( msg.motornord.confirm == 'confirm' ) {
                 dialog_ventnord.dialog("open");
               }
+              if ( msg.VentAutSwitch ) {
+                $(".vent").hide("fast");
+                $( "#data" ).prop( "checked", true );
+              }
               
             });
 
@@ -86,6 +93,10 @@
               socket.emit('data_send', {heatersetpoint: $('#emit_data').val()});
               return false;
             });
+            $('form#tempsetpointheater').change(function(event) {
+              socket.emit('data_send', {TempSetPointHeater: $('#myRange').val()});
+              return false;
+            });
             $('form#heaterswitch').change(function(event) {
               socket.emit('data_send', {heaterswitch: $('#emit_data').val()});
               return false;
@@ -101,7 +112,7 @@
               buttons: {
                 Ja: function() {
                   $( this ).dialog( "close" );
-                  socket.emit('data_send', {motornord: {confirm: 'ja'}});
+                  socket.emit('data_send', {motornord: {confirm: 'confirmed'}});
                 },
                 Nej: function() {
                   $( this ).dialog( "close" );
@@ -118,7 +129,7 @@
               buttons: {
                 Ja: function() {
                   $( this ).dialog( "close" );
-                  socket.emit('data_send', {motorsyd: {confirm: 'ja'}});
+                  socket.emit('data_send', {motorsyd: {confirm: 'confirmed'}});
                 },
                 Nej: function() {
                   $( this ).dialog( "close" );
@@ -126,10 +137,6 @@
               }
             });
       });
-
-
-
-
 
 
     $(function() {
@@ -142,15 +149,68 @@
     });
 
 
-    function updateRangeInput(elem) {
-      $(elem).next().next().val($(elem).val());
+     //   function updateRangeInput(elem) {
+     //     document.getElementById('bajsmannen').innerHTML=elem.val; 
+     //   }
+    function updateTextInput(val) {
+      document.getElementById('textInput').innerHTML=val; 
     }
+
+    function updateTextInput2(val) {
+      document.getElementById('textInput2').innerHTML=val; 
+    }
+
+    function updateTextInput3(val) {
+      document.getElementById('textInput3').innerHTML=val; 
+    }
+
+
+
+
+  google.charts.load('current', {packages: ['corechart', 'line']});
+  google.charts.setOnLoadCallback(drawBasic);
+
+  function drawBasic() {
+
+        var data = new google.visualization.DataTable();
+        data.addColumn('number', 'X');
+        data.addColumn('number', 'Dogs');
+
+        data.addRows([
+          [01, 0],   [02, 10],  [03, 23],  [3, 17],  [4, 18],  [5, 9],
+          [6, 11],  [7, 27],  [8, 33],  [9, 40],  [10, 32], [11, 35],
+          [12, 30], [13, 40], [14, 42], [15, 47], [16, 44], [17, 48],
+          [18, 52], [19, 54], [20, 42], [21, 55], [22, 56], [23, 57],
+          [24, 60], [25, 50], [26, 52], [27, 51], [28, 49], [29, 53],
+          [30, 55], [31, 60], [32, 61], [33, 59], [34, 62], [35, 65],
+          [36, 62], [37, 58], [38, 55], [39, 61], [40, 64], [41, 65],
+          [42, 63], [43, 66], [44, 67], [45, 69], [46, 69], [47, 70],
+          [48, 72], [49, 68], [50, 66], [51, 65], [52, 67], [53, 70],
+          [54, 71], [55, 72], [56, 73], [57, 75], [58, 70], [59, 68],
+          [60, 64], [61, 60], [62, 65], [63, 67], [64, 68], [65, 69],
+          [66, 70], [67, 72], [68, 75], [69, 80]
+        ]);
+
+        var options = {
+          hAxis: {
+            title: 'Timme'
+          },
+          vAxis: {
+            title: 'Temperatur'
+          }
+        };
+
+        var chart = new google.visualization.LineChart(document.getElementById('logg'));
+
+        chart.draw(data, options);
+        $("#logg").hide();
+  }
 
   </script>
   <style>
   input { border: 1px solid #ddd; color: #555;}
 tbody tr:nth-child(odd) { background-color: #eee;  }
-td:nth-child(2) { width: 100%; }
+/*td:nth-child(2) { width: 100%; } */
 td:nth-child(1)  {white-space: nowrap;}
 td:nth-child(3) { white-space: nowrap; }
 
@@ -158,8 +218,6 @@ td:nth-child(3) { white-space: nowrap; }
     width: 100%;
     border-spacing: 0;
   }
-
-
 
   .content { display:none;}
   .item1 { grid-area: header; }
@@ -230,45 +288,8 @@ input[type=range] {
   width: 100%;
 }
   
-/*Chrome*/
-@media screen and (-webkit-min-device-pixel-ratio:0) {
-    input[type='range'] {
-      overflow: hidden;
-      -webkit-appearance: none;
-      background-color: #9a905d;
-    }
-    
-    input[type='range']::-webkit-slider-runnable-track {
-      height: 10px;
-      -webkit-appearance: none;
-      color: #13bba4;
-      margin-top: -1px;
-    }
-    
-    input[type='range']::-webkit-slider-thumb {
-      width: 10px;
-      -webkit-appearance: none;
-      height: 10px;
-      cursor: ew-resize;
-      background: #434343;
-      box-shadow: -80px 0 0 80px #43e5f7;
-    }
 
-}
-/** FF*/
-input[type="range"]::-moz-range-progress {
-  background-color: #0A0; 
-}
-input[type="range"]::-moz-range-track {  
-  background-color: #CCC;
-}
-/* IE*/
-input[type="range"]::-ms-fill-lower {
-  background-color: #0A0; 
-}
-input[type="range"]::-ms-fill-upper {  
-  background-color: #CCC;
-}
+
   
 </style>
 </head>
@@ -311,6 +332,7 @@ input[type="range"]::-ms-fill-upper {
      <li><a href="#" data-page="vv">Ventilation & Värme</a></li>
      <li><a href="#" data-page="vattning">Bevattning</a></li>
      <li><a href="#" data-page="settings">Inställningar</a></li>
+     <li><a href="#" data-page="logg">Logg</a></li>
      <li id="clock">10:23</li>
    </ul>
    </div>
@@ -398,39 +420,42 @@ input[type="range"]::-ms-fill-upper {
           <td>&nbsp;&nbsp;&gt;&gt;&nbsp;&nbsp;Ventilation Nord</td>
           <td >
             <form id="ventnord" method="POST" action="#">
-              <input type="range" min="0" max="100" value="0" class="slider" id="emit_data" oninput="updateRangeInput(this)">
-              
+              <input type="range" min="0" max="100" value="0" class="slider" id="emit_data" oninput="updateTextInput(this.value);">
             </form>
           </td>
-          <td><output type="text" value="8">0</output>%</td>
+          <td><span id="textInput"></span>%</td>
         </tr>
         <tr class="vent">
           <td>&nbsp;&nbsp;&gt;&gt;&nbsp;&nbsp;Ventilation Syd</td>
           <td>
             <form id="ventsyd" method="POST" action="#">
-              <input type="range" min="0" max="100" value="0" class="slider" id="emit_data2" oninput="updateRangeInput(this)">
+              <input type="range" min="0" max="100" value="0" class="slider" id="emit_data2" oninput="updateTextInput2(this.value);">
             </form>
           </td>
-          <td><output type="text" value="8">33</output>%</td>
+          <td><span id="textInput2"></span>%</td>
         </tr>
         <tr>
           <td>Temperatur börvärde dag</td>
           <td>
             <form id="tempsetpointday" method="POST" action="#">
-              <input type="range" min="1" max="30" value="20" class="slider" id="d" oninput="updateRangeInput(this)">
+              <input type="range" min="1" max="42" value="20" class="slider" id="d" oninput="updateTextInput3(this.value);">
               
             </form>
           </td>
-          <td><output type="text" value="8">20</output> &deg;C</td>
+          <td><span id="textInput3"></span> &deg;C</td>
         </tr>
         <tr>
           <td>Temperatur börvärde natt</td>
-          <td><input type="range" min="1" max="30" value="18" class="slider" id="myRange" oninput="updateRangeInput(this)" ></td>
+          <td><input type="range" min="1" max="30" value="18" class="slider" id="myRanger" oninput="updateRangeInput(this)" ></td>
           <td><output type="text" value="8">18</output> &deg;C</td>
         </tr>
         <tr>
           <td>Starttemperatur Värmetillskott</td>
-          <td><input type="range" min="-15" max="30" value="8" class="slider" id="myRange" oninput="updateRangeInput(this)"></td>
+          <td>
+            <form id="tempsetpointheater" method="POST" action="#">
+              <input type="range" min="0" max="22" value="8" class="slider" id="myRange" oninput="updateRangeInput(this)">
+            </form>
+          </td>
           <td><output type="text" value="8">8</output> &deg;C</td>
         </tr>
         <tr>
@@ -439,6 +464,63 @@ input[type="range"]::-ms-fill-upper {
           <td></td>
         </tr>
       </table>
+    </div>
+    <div id="vattning" class="item2 content">
+        <table>
+                  <thead>
+          <tr>
+            <th>W1</th>
+            <th>W2</th>
+            <th>Starttid</th>
+            <th>Bevattningstid</th>
+          </tr>
+        </thead>
+          <tr>
+          <td><input type="checkbox" checked="checked"></td>
+          <td><input type="checkbox" checked="checked"></td>
+          <td><div class="input-group clockpicker"><input type="text" class="form-control" value="09:30"></div></td>
+          <td>
+          <input type="range" min="0" max="60" value="10" class="slider" id="myRange" oninput="updateRangeInput(this)">
+          </td>
+          <td><output type="text" value="8">8</output> Minuter</td>
+        </tr>
+          <tr>
+          <td><input type="checkbox" checked="checked"></td>
+          <td><input type="checkbox" checked="checked"></td>
+          <td><div class="input-group clockpicker"><input type="text" class="form-control" value="09:30"></div></td>
+          <td>
+          <input type="range" min="0" max="60" value="10" class="slider" id="myRange" oninput="updateRangeInput(this)">
+          </td>
+          <td><output type="text" value="8">8</output> Minuter</td>
+        </tr>
+          <tr>
+          <td><input type="checkbox" checked="checked"></td>
+          <td><input type="checkbox" checked="checked"></td>
+          <td><div class="input-group clockpicker"><input type="text" class="form-control" value="09:30"></div></td>
+          <td>
+          <input type="range" min="0" max="60" value="10" class="slider" id="myRange" oninput="updateRangeInput(this)">
+          </td>
+          <td><output type="text" value="8">8</output> Minuter</td>
+        </tr>
+          <tr>
+          <td><input type="checkbox" checked="checked"></td>
+          <td><input type="checkbox" checked="checked"></td>
+          <td><div class="input-group clockpicker"><input type="text" class="form-control" value="09:30"></div></td>
+          <td>
+          <input type="range" min="0" max="60" value="10" class="slider" id="myRange" oninput="updateRangeInput(this)">
+          </td>
+          <td><output type="text" value="8">8</output> Minuter</td>
+        </tr>
+      </table>
+    
+
+
+<script type="text/javascript">
+$('.clockpicker').clockpicker();
+</script>
+    </div>
+    <div id="logg" class="item2">
+      <div id="chart_div"></div>
     </div>
   </div>
 <div id="dialog-confirm-ventnord" title="Beräkningsfel">
