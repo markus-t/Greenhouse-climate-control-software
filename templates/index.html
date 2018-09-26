@@ -3,526 +3,231 @@
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="refresh" content="120">
-  <link rel="stylesheet" href="static/bulma.min.css">
-  <!--<link rel="stylesheet" type="test/css" href="style.css">-->
-  <script defer src="https://use.fontawesome.com/releases/v5.0.0/js/all.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src="static/jquery.js"></script>
+
+  <link rel="stylesheet" href="static/bulma.min.css">
+  <link rel="stylesheet" href="static/style.css">
   <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
   <link rel="stylesheet" href="static/jquery-clockpicker.css">
-  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+  
+  <script type="text/javascript" src="static/jquery.js"></script>
+  <script type="text/javascript" src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
   <script type="text/javascript" src="static/socket.io.min.js"></script>
   <script type="text/javascript" src="static/jquery-clockpicker.js"></script>
   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-  <script type="text/javascript" charset="utf-8">
+  <script type="text/javascript" src="static/script.js"></script>
 
-    
-    $(document).ready(function() {
-
-            // Use a "/test" namespace.
-            // An application can open a connection on multiple namespaces, and
-            // Socket.IO will multiplex all those connections on a single
-            // physical channel. If you don't care about multiple channels, you
-            // can set the namespace to an empty string.
-            namespace = '/test';
-
-            // Connect to the Socket.IO server.
-            // The connection URL has the following format:
-            //     http[s]://<domain>:<port>[/<namespace>]
-            var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + namespace);
-
-            // Event handler for new connections.
-            // The callback function is invoked when a connection with the
-            // server is established.
-            socket.on('connect', function() {
-              socket.emit('connected', {data: 'I\'m connected!'});
-            });
-
-            // Event handler for server sent data.
-            // The callback function is invoked whenever the server emits data
-            // to the client. The data is then displayed in the "Received"
-            // section of the page.
-            socket.on('my_response', function(msg) {
-              $('#motornordPosition').html(msg.motornord.position);
-              $('#motorsydPosition').html(msg.motorsyd.position);
-              $('#temperature').html(msg.weather.temperature);
-              $('#deg').html(msg.deg);
-              $('#hum').html(msg.hum);
-              $('#lux').html(msg.lux);
-              $('#emit_data').val(msg.motornord.movetoposition);               
-              $('#emit_data2').val(msg.motorsyd.movetoposition); 
-              if ( msg.motorsyd.confirm == 'confirm' ) {
-                dialog_ventsyd.dialog("open");
-              } 
-              if ( msg.motornord.confirm == 'confirm' ) {
-                dialog_ventnord.dialog("open");
-              }
-              if ( msg.VentAutSwitch ) {
-                $(".vent").hide("fast");
-                $( "#data" ).prop( "checked", true );
-              }
-              
-            });
-
-
-            // Handlers for the different forms in the page.
-            // These accept data from the user and send it to the server in a
-            // variety of ways
-            $('form#ventautswtich').change(function(event) {
-              socket.emit('data_send', {VentAutSwitch: $('#data').is(':checked')});
-              $(".vent").toggle("fast");
-              return false;
-            });
-            $('form#ventnord').change(function(event) {
-              socket.emit('data_send', {motornord: {movetoposition: $('#emit_data').val()}});
-              return false;
-            });
-            $('form#ventsyd').change(function(event) {
-              socket.emit('data_send', {motorsyd: {movetoposition:  $('#emit_data2').val()}});
-              return false;
-            });
-            $('form#tempsetpointday').change(function(event) {
-              socket.emit('data_send', {TempSetPointDay: $('#d').val()});
-              return false;
-            });
-            $('form#tempsetpointnight').change(function(event) {
-              socket.emit('data_send', {tempsetpointnight: $('#d2').val()});
-              return false;
-            });
-            $('form#heatersetpoint').change(function(event) {
-              socket.emit('data_send', {heatersetpoint: $('#emit_data').val()});
-              return false;
-            });
-            $('form#tempsetpointheater').change(function(event) {
-              socket.emit('data_send', {TempSetPointHeater: $('#myRange').val()});
-              return false;
-            });
-            $('form#heaterswitch').change(function(event) {
-              socket.emit('data_send', {heaterswitch: $('#emit_data').val()});
-              return false;
-            });
-
-
-            dialog_ventnord = $( "#dialog-confirm-ventnord" ).dialog({
-              autoOpen: false,
-              resizable: false,
-              height: "auto",
-              width: 400,
-              modal: true,
-              buttons: {
-                Ja: function() {
-                  $( this ).dialog( "close" );
-                  socket.emit('data_send', {motornord: {confirm: 'confirmed'}});
-                },
-                Nej: function() {
-                  $( this ).dialog( "close" );
-                }
-              }
-            });
-
-            dialog_ventsyd = $( "#dialog-confirm-ventsyd" ).dialog({
-              autoOpen: false,
-              resizable: false,
-              height: "auto",
-              width: 400,
-              modal: true,
-              buttons: {
-                Ja: function() {
-                  $( this ).dialog( "close" );
-                  socket.emit('data_send', {motorsyd: {confirm: 'confirmed'}});
-                },
-                Nej: function() {
-                  $( this ).dialog( "close" );
-                }
-              }
-            });
-      });
-
-
-    $(function() {
-      var curPage="status";
-      $("#menu a").click(function() {
-        $("#"+curPage).hide();
-        curPage=$(this).data("page");
-        $("#"+curPage).show();
-      });
-    });
-
-
-     //   function updateRangeInput(elem) {
-     //     document.getElementById('bajsmannen').innerHTML=elem.val; 
-     //   }
-    function updateTextInput(val) {
-      document.getElementById('textInput').innerHTML=val; 
-    }
-
-    function updateTextInput2(val) {
-      document.getElementById('textInput2').innerHTML=val; 
-    }
-
-    function updateTextInput3(val) {
-      document.getElementById('textInput3').innerHTML=val; 
-    }
-
-
-
-
-  google.charts.load('current', {packages: ['corechart', 'line']});
-  google.charts.setOnLoadCallback(drawBasic);
-
-  function drawBasic() {
-
-        var data = new google.visualization.DataTable();
-        data.addColumn('number', 'X');
-        data.addColumn('number', 'Dogs');
-
-        data.addRows([
-          [01, 0],   [02, 10],  [03, 23],  [3, 17],  [4, 18],  [5, 9],
-          [6, 11],  [7, 27],  [8, 33],  [9, 40],  [10, 32], [11, 35],
-          [12, 30], [13, 40], [14, 42], [15, 47], [16, 44], [17, 48],
-          [18, 52], [19, 54], [20, 42], [21, 55], [22, 56], [23, 57],
-          [24, 60], [25, 50], [26, 52], [27, 51], [28, 49], [29, 53],
-          [30, 55], [31, 60], [32, 61], [33, 59], [34, 62], [35, 65],
-          [36, 62], [37, 58], [38, 55], [39, 61], [40, 64], [41, 65],
-          [42, 63], [43, 66], [44, 67], [45, 69], [46, 69], [47, 70],
-          [48, 72], [49, 68], [50, 66], [51, 65], [52, 67], [53, 70],
-          [54, 71], [55, 72], [56, 73], [57, 75], [58, 70], [59, 68],
-          [60, 64], [61, 60], [62, 65], [63, 67], [64, 68], [65, 69],
-          [66, 70], [67, 72], [68, 75], [69, 80]
-        ]);
-
-        var options = {
-          hAxis: {
-            title: 'Timme'
-          },
-          vAxis: {
-            title: 'Temperatur'
-          }
-        };
-
-        var chart = new google.visualization.LineChart(document.getElementById('logg'));
-
-        chart.draw(data, options);
-        $("#logg").hide();
-  }
-
-  </script>
-  <style>
-  input { border: 1px solid #ddd; color: #555;}
-tbody tr:nth-child(odd) { background-color: #eee;  }
-/*td:nth-child(2) { width: 100%; } */
-td:nth-child(1)  {white-space: nowrap;}
-td:nth-child(3) { white-space: nowrap; }
-
-  table {
-    width: 100%;
-    border-spacing: 0;
-  }
-
-  .content { display:none;}
-  .item1 { grid-area: header; }
-  .item2 { grid-area: menu; }
-  .item3 { grid-area: main; }
-  .item5 { grid-area: footer; }
-
-  .grid-container {
-    font-family: Consolas;
-    display: grid;
-    grid-template-areas:
-    'header header header header'
-    'menu menu menu menu'
-    'menu menu menu menu';
-    grid-gap: 5px;
-    padding: 0px;
-  }
-  .grid-container > div {
-    text-align: left;
-    padding: 0;
-    font-size: 18px;
-  }
-  ul {
-    list-style-type: none;
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-    background-color: #666;
-  }
-
-  li {  float: left;}
-
-  #clock {
-    display: block;
-    color: white;
-    text-align: center;
-    padding: 14px 16px;
-    text-decoration: none;
-    float: right;
-  }
-
-  li a {
-    display: block;
-    color: white;
-    text-align: center;
-    padding: 14px 16px;
-    text-decoration: none;
-  }
-
-  li a:hover {   background-color: #111;}
-
-
-
-input[type='checkbox'] {
-    -webkit-appearance:none;
-    width:25px;
-    height:25px;
-    background:black;
-    border-radius:5px;
-    border:2px solid #fff;
-}
-input[type='checkbox']:checked {
-    background: #abd;
-}
-
-input[type=range] {
-  margin: 1px 0;
-  width: 100%;
-}
-  
-
-
-  
-</style>
 </head>
 <body>
 
-
-
-  <!--<nav class="navbar" role="navigation" aria-label="main navigation">
-
-    <div class="navbar-brand" id="menu">
-      <div class="navbar-start">
-        <a class="navbar-item" data-page="status">
-          Status
-        </a>
-        <a class="navbar-item" data-page="vv">
-          Ventilation å Värme
-        </a>
-        <a class="navbar-item" data-page="vattning">
-          Bevattning
-        </a>
-        <a class="navbar-item" data-page="settings">
-          Inställningar
-        </a>
-      </div>
-
-      <div class="navbar-end">
-        <div class="navbar-item">
-          <div class="field">
-            
-          </div>
-        </div>
-      </div>
-    </div>
-  </nav>-->
-
-<div class="grid-container">
-  <div class="item1">
-   <ul id="menu">
-     <li><a href="#" data-page="status">Status</a></li>
-     <li><a href="#" data-page="vv">Ventilation & Värme</a></li>
-     <li><a href="#" data-page="vattning">Bevattning</a></li>
-     <li><a href="#" data-page="settings">Inställningar</a></li>
-     <li><a href="#" data-page="logg">Logg</a></li>
-     <li id="clock">10:23</li>
-   </ul>
+  <div class="grid-container">
+    <div class="item1">
+     <ul id="menu">
+       <li><a href="#" data-page="status">Status</a></li>
+       <li><a href="#" data-page="vv">Ventilation & Värme</a></li>
+       <li><a href="#" data-page="vattning">Bevattning</a></li>
+       <li><a href="#" data-page="settings">Inställningar</a></li>
+       <li><a href="#" data-page="logg">Logg</a></li>
+       <li id="clock">10:23</li>
+     </ul>
    </div>
 
-    <div id="status" class="item2">
-      <table>
-        <thead>
-          <tr>
-            <th>Egenskap</th>
-            <th>Värde</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Ventilation Nord</td>
-            <td id="motornordPosition"></td>
-            <td>Öppnar</td>
-          </tr>
-          <tr>
-            <td>Ventilation Syd</td>
-            <td id="motorsydPosition"></td>
-            <td>Stilla</td>
-          </tr>
-          <tr>
-            <td>Vattenventil 1</td>
-            <td>Stängd</td>
-            <td>Öppnar 16:00</td>
-          </tr>
-          <tr>
-            <td>Vattenventil 2</td>
-            <td>Öppen</td>
-            <td>Stänger 15:22</td>
-          </tr>
-          <tr>
-            <td>Luftemperatur ute</td>
-            <td><span id="temperature"></span> &deg;C</td>
-            <td></td>
-          </tr>
-          <tr>
-            <td >Luftemperatur växthus</td>
-            <td><span id="deg"></span> &deg;C</td>
-            <td></td>
-          </tr>
-          <tr>
-            <td>Byvind</td>
-            <td>&#8598; 15m/s</td>
-            <td></td>
-          </tr>
-          <tr>
-            <td>Nederbörd</td>
-            <td>0.0mm/h</td>
-            <td></td>
-          </tr>
-          <tr>
-            <td>Ljusnivå</td>
-            <td><span id="lux"></span> Lux</td>
-            <td></td>
-          </tr>
-          <tr>
-            <td>Luftfuktighet</td>
-            <td><span id="hum"></span> %RF</td>
-            <td></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <div id="vv" class="item2 content">
-      <table>
+   <div id="status" class="item2">
+    <table>
+      <thead>
         <tr>
           <th>Egenskap</th>
-          <th >Ändra</th>
-          <th >Värde</th>
+          <th>Värde</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Ventilation Nord</td>
+          <td id="motornordPosition"><div id="nordProgress"><div id="nordBar"></div></div></td>
+          <td id="motornordState"></td>
         </tr>
         <tr>
-          <td>Ventilationsautomatik på/av</td>
-          <td>
-            <form id="ventautswtich" method="POST" action="#">
-              <input type="checkbox" value="True" id="data" name="emit_data">
-            </form>
-          </td>
+          <td>Ventilation Syd</td>
+          <td id="motorsydPosition"><div id="sydProgress"><div id="sydBar"></div></div></td>
+          <td id="motorsydState"></td>
+        </tr>
+        <tr>
+          <td>Vattenventil 1</td>
+          <td>Stängd</td>
+          <td>Öppnar 16:00</td>
+        </tr>
+        <tr>
+          <td>Vattenventil 2</td>
+          <td>Öppen</td>
+          <td>Stänger 15:22</td>
+        </tr>
+        <tr>
+          <td>Luftemperatur ute</td>
+          <td><span id="temperature"></span> &deg;C</td>
           <td></td>
         </tr>
-        <tr class="vent">
-          <td>&nbsp;&nbsp;&gt;&gt;&nbsp;&nbsp;Ventilation Nord</td>
-          <td >
-            <form id="ventnord" method="POST" action="#">
-              <input type="range" min="0" max="100" value="0" class="slider" id="emit_data" oninput="updateTextInput(this.value);">
-            </form>
-          </td>
-          <td><span id="textInput"></span>%</td>
-        </tr>
-        <tr class="vent">
-          <td>&nbsp;&nbsp;&gt;&gt;&nbsp;&nbsp;Ventilation Syd</td>
-          <td>
-            <form id="ventsyd" method="POST" action="#">
-              <input type="range" min="0" max="100" value="0" class="slider" id="emit_data2" oninput="updateTextInput2(this.value);">
-            </form>
-          </td>
-          <td><span id="textInput2"></span>%</td>
-        </tr>
         <tr>
-          <td>Temperatur börvärde dag</td>
-          <td>
-            <form id="tempsetpointday" method="POST" action="#">
-              <input type="range" min="1" max="42" value="20" class="slider" id="d" oninput="updateTextInput3(this.value);">
-              
-            </form>
-          </td>
-          <td><span id="textInput3"></span> &deg;C</td>
-        </tr>
-        <tr>
-          <td>Temperatur börvärde natt</td>
-          <td><input type="range" min="1" max="30" value="18" class="slider" id="myRanger" oninput="updateRangeInput(this)" ></td>
-          <td><output type="text" value="8">18</output> &deg;C</td>
-        </tr>
-        <tr>
-          <td>Starttemperatur Värmetillskott</td>
-          <td>
-            <form id="tempsetpointheater" method="POST" action="#">
-              <input type="range" min="0" max="22" value="8" class="slider" id="myRange" oninput="updateRangeInput(this)">
-            </form>
-          </td>
-          <td><output type="text" value="8">8</output> &deg;C</td>
-        </tr>
-        <tr>
-          <td>Värmetillskott av/på</td>
-          <td><input type="checkbox" checked="checked"></td>
+          <td >Luftemperatur växthus</td>
+          <td><span id="deg"></span> &deg;C</td>
           <td></td>
         </tr>
-      </table>
-    </div>
-    <div id="vattning" class="item2 content">
-        <table>
-                  <thead>
-          <tr>
-            <th>W1</th>
-            <th>W2</th>
-            <th>Starttid</th>
-            <th>Bevattningstid</th>
-          </tr>
-        </thead>
-          <tr>
-          <td><input type="checkbox" checked="checked"></td>
-          <td><input type="checkbox" checked="checked"></td>
-          <td><div class="input-group clockpicker"><input type="text" class="form-control" value="09:30"></div></td>
-          <td>
-          <input type="range" min="0" max="60" value="10" class="slider" id="myRange" oninput="updateRangeInput(this)">
-          </td>
-          <td><output type="text" value="8">8</output> Minuter</td>
+        <tr>
+          <td>Byvind</td>
+          <td>&#8598; <span id="windspeed"></span>m/s</td>
+          <td></td>
         </tr>
-          <tr>
-          <td><input type="checkbox" checked="checked"></td>
-          <td><input type="checkbox" checked="checked"></td>
-          <td><div class="input-group clockpicker"><input type="text" class="form-control" value="09:30"></div></td>
-          <td>
-          <input type="range" min="0" max="60" value="10" class="slider" id="myRange" oninput="updateRangeInput(this)">
-          </td>
-          <td><output type="text" value="8">8</output> Minuter</td>
+        <tr>
+          <td>Nederbörd</td>
+          <td>0.0mm/h</td>
+          <td></td>
         </tr>
-          <tr>
-          <td><input type="checkbox" checked="checked"></td>
-          <td><input type="checkbox" checked="checked"></td>
-          <td><div class="input-group clockpicker"><input type="text" class="form-control" value="09:30"></div></td>
-          <td>
-          <input type="range" min="0" max="60" value="10" class="slider" id="myRange" oninput="updateRangeInput(this)">
-          </td>
-          <td><output type="text" value="8">8</output> Minuter</td>
+        <tr>
+          <td>Ljusnivå</td>
+          <td><span id="lux"></span> Lux</td>
+          <td></td>
         </tr>
-          <tr>
-          <td><input type="checkbox" checked="checked"></td>
-          <td><input type="checkbox" checked="checked"></td>
-          <td><div class="input-group clockpicker"><input type="text" class="form-control" value="09:30"></div></td>
-          <td>
-          <input type="range" min="0" max="60" value="10" class="slider" id="myRange" oninput="updateRangeInput(this)">
-          </td>
-          <td><output type="text" value="8">8</output> Minuter</td>
+        <tr>
+          <td>Luftfuktighet</td>
+          <td><span id="hum"></span> %RF</td>
+          <td></td>
         </tr>
-      </table>
-    
-
-
-<script type="text/javascript">
-$('.clockpicker').clockpicker();
-</script>
-    </div>
-    <div id="logg" class="item2">
-      <div id="chart_div"></div>
-    </div>
+      </tbody>
+    </table>
   </div>
+  <div id="vv" class="item2 content">
+    <table>
+      <tr>
+        <th>Egenskap</th>
+        <th >Ändra</th>
+        <th >Värde</th>
+      </tr>
+      <tr>
+        <td>Ventilationsautomatik på/av</td>
+        <td>
+          <form id="ventautswtich" method="POST" action="#">
+            <input type="checkbox" value="True" id="data" name="emit_data">
+          </form>
+        </td>
+        <td></td>
+      </tr>
+      <tr class="vent">
+        <td>&nbsp;&nbsp;&gt;&gt;&nbsp;&nbsp;Ventilation Nord</td>
+        <td >
+          <form id="ventnord" method="POST" action="#">
+            <input type="range" min="0" max="100" value="0" class="slider" id="emit_data" oninput="updateTextInput(this.value);">
+          </form>
+        </td>
+        <td><span id="textInput"></span>%</td>
+      </tr>
+      <tr class="vent">
+        <td>&nbsp;&nbsp;&gt;&gt;&nbsp;&nbsp;Ventilation Syd</td>
+        <td>
+          <form id="ventsyd" method="POST" action="#">
+            <input type="range" min="0" max="100" value="0" class="slider" id="emit_data2" oninput="updateTextInput2(this.value);">
+          </form>
+        </td>
+        <td><span id="textInput2"></span>%</td>
+      </tr>
+      <tr>
+        <td>Temperatur börvärde dag</td>
+        <td>
+          <form id="tempsetpointday" method="POST" action="#">
+            <input type="range" min="1" max="42" value="20" class="slider" id="d" oninput="updateTextInput3(this.value);">
+          </form>
+        </td>
+        <td><span id="textInput3"></span> &deg;C</td>
+      </tr>
+      <tr>
+        <td>Temperatur börvärde natt</td>
+        <td><input type="range" min="1" max="30" value="18" class="slider" id="myRanger3" oninput="updateTextInput4(this.value)" ></td>
+        <td><span id="textInput4"></span> &deg;C</td>
+      </tr>
+      <tr>
+        <td>Värmetillskott av/på</td>
+        <td>
+          <form id="heaterswitch" method="POST" action="#">
+            <input type="checkbox" value="True" id="data2" name="emit_data2">
+          </form>
+        </td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>&nbsp;&nbsp;&gt;&gt;&nbsp;&nbsp;Starttemperatur Värmetillskott</td>
+        <td>
+          <form id="tempsetpointheater" method="POST" action="#">
+            <input type="range" min="0" max="30" value="8" class="slider" id="myRange4" oninput="updateTextInput5(this.value)">
+          </form>
+        </td>
+        <td><span id="textInput5"></span> &deg;C</td>
+      </tr>
+    </table>
+  </div>
+  <div id="vattning" class="item2 content">
+    <table>
+      <thead>
+        <tr>
+          <th>W1</th>
+          <th>W2</th>
+          <th>Starttid</th>
+          <th>Bevattningstid</th>
+        </tr>
+      </thead>
+      <tr>
+        <td><form id="A_W1" method="POST" action="#"><input type="checkbox" id="A_W1d" value="True" checked="checked"></form></td>
+        <td><form id="A_W2" method="POST" action="#"><input type="checkbox" id="A_W2d" value="True" checked="checked"></form></td>
+        <td><div class="input-group clockpicker"><input type="text" class="form-control" value="09:30"></div></td>
+        <td>
+          <input type="range" min="0" max="60" value="10" class="slider" id="myRange" oninput="updateRangeInput(this)">
+        </td>
+        <td><output type="text" value="8">8</output> Minuter</td>
+      </tr>
+      <tr>
+        <td><input type="checkbox" checked="checked"></td>
+        <td><input type="checkbox" checked="checked"></td>
+        <td><div class="input-group clockpicker"><input type="text" class="form-control" value="09:30"></div></td>
+        <td>
+          <input type="range" min="0" max="60" value="10" class="slider" id="myRange" oninput="updateRangeInput(this)">
+        </td>
+        <td><output type="text" value="8">8</output> Minuter</td>
+      </tr>
+      <tr>
+        <td><input type="checkbox" checked="checked"></td>
+        <td><input type="checkbox" checked="checked"></td>
+        <td><div class="input-group clockpicker"><input type="text" class="form-control" value="09:30"></div></td>
+        <td>
+          <input type="range" min="0" max="60" value="10" class="slider" id="myRange" oninput="updateRangeInput(this)">
+        </td>
+        <td><output type="text" value="8">8</output> Minuter</td>
+      </tr>
+      <tr>
+        <td><input type="checkbox" checked="checked"></td>
+        <td><input type="checkbox" checked="checked"></td>
+        <td><div class="input-group clockpicker"><input type="text" class="form-control" value="09:30"></div></td>
+        <td>
+          <input type="range" min="0" max="60" value="10" class="slider" id="myRange" oninput="updateRangeInput(this)">
+        </td>
+        <td><output type="text" value="8">8</output> Minuter</td>
+      </tr>
+    </table>
+
+
+
+    <script type="text/javascript">
+      $('.clockpicker').clockpicker();
+    </script>
+  </div>
+  <div id="settings" class="item2 content">
+   <h2>Debug data</h2>
+   <pre id="zodb_data">
+    At w3schools.com you will learn how to make a website. We offer free tutorials in all web development technologies.
+  </pre> 
+</pre>
+</div>
+<div id="logg" class="item2" style="width:100%;">
+  <div id="chart_div" style="width:100%;"></div>
+</div>
+</div>
 <div id="dialog-confirm-ventnord" title="Beräkningsfel">
   <p><span class="ui-icon ui-icon-alert" style="float:left; margin:12px 12px 20px 0;"></span>Är motor nord i helt nedstängt läge?</p>
 </div>

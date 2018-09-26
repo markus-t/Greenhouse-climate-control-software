@@ -1,58 +1,108 @@
-      <style>
-      input { border: 1px solid #ddd; color: #555;}
+                input { border: 1px solid #ddd; color: #555;}
+                tbody tr:nth-child(odd) { background-color: #eee;  }
+                /*td:nth-child(2) { width: 100%; } */
+                td:nth-child(1)  {white-space: nowrap;}
+                td:nth-child(3) { white-space: nowrap; }
 
-      table {
-        width: 100%;
-        border-spacing: 0;
-      }
+                table {
+                  width: 100%;
+                  border-spacing: 0;
+                }
 
-      .content { display:none;}
-      .item1 { grid-area: header; }
-      .item2 { grid-area: menu; }
-      .item3 { grid-area: main; }
-      .item5 { grid-area: footer; }
+                .content { display:none;}
+                .item1 { grid-area: header; }
+                .item2 { grid-area: menu; }
+                .item3 { grid-area: main; }
+                .item5 { grid-area: footer; }
 
-      .grid-container {
-        font-family: Consolas;
-        display: grid;
-        grid-template-areas:
-        'header header header header'
-        'menu menu menu menu'
-        'menu menu menu menu';
-        grid-gap: 5px;
-        padding: 0px;
-      }
-      .grid-container > div {
-        text-align: left;
-        padding: 0;
-        font-size: 15px;
-      }
-      ul {
-        list-style-type: none;
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-        background-color: #333;
-      }
+                .grid-container {
+                  font-family: Consolas;
+                  display: grid;
+                  grid-template-areas:
+                  'header header header header'
+                  'menu menu menu menu'
+                  'menu menu menu menu';
+                  grid-gap: 5px;
+                  padding: 0px;
+                }
+                .grid-container > div {
+                  text-align: left;
+                  padding: 0;
+                  font-size: 18px;
+                }
+                ul {
+                  list-style-type: none;
+                  margin: 0;
+                  padding: 0;
+                  overflow: hidden;
+                  background-color: #933;
+                }
 
-      li {  float: left;}
+                li {  float: left;}
 
-      #clock {
-        display: block;
-        color: white;
-        text-align: center;
-        padding: 14px 16px;
-        text-decoration: none;
-        float: right;
-      }
+                #clock {
+                  display: block;
+                  color: white;
+                  text-align: center;
+                  padding: 14px 16px;
+                  text-decoration: none;
+                  float: right;
+                }
 
-      li a {
-        display: block;
-        color: white;
-        text-align: center;
-        padding: 14px 16px;
-        text-decoration: none;
-      }
+                li a {
+                  display: block;
+                  color: white;
+                  text-align: center;
+                  padding: 14px 16px;
+                  text-decoration: none;
+                }
 
-      li a:hover {   background-color: #111;}
-    </style>
+                li a:hover {   background-color: #111;}
+
+
+
+                input[type='checkbox'] {
+                  -webkit-appearance:none;
+                  width:25px;
+                  height:25px;
+                  background:black;
+                  border-radius:5px;
+                  border:2px solid #fff;
+                }
+                input[type='checkbox']:checked {
+                  background: #abd;
+                }
+
+                input[type=range] {
+                  margin: 1px 0;
+                  width: 100%;
+                }
+
+
+                
+                #nordProgress {
+                  width: 100%;
+                  background-color: #eee;
+                  border-style: solid;
+                  border-width: 1px;
+                }
+
+                #nordBar {
+                  width: 1%;
+                  height: 25px;
+                  background-color: #4CAF50;
+                }
+
+                #sydProgress {
+                  width: 100%;
+                  background-color: #eee;
+                  border-style: solid;
+                  border-width: 1px;
+                }
+
+                #sydBar {
+                  width: 1%;
+                  height: 25px;
+                  background-color: #4CAF50;
+                }
+                
