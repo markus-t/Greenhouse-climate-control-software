@@ -145,15 +145,17 @@ class ventmotor:
 
         if position > self.originposition:
             go_up = True
+            lagg = self.motor['uplag']
             logging.debug('Set output %s True for %s seconds', self.go_up, movement)
             self.io.setoutput(self.go_up, True)
 
         elif position <= self.originposition:
             go_up = False
+            lagg = self.motor['downlag']
             logging.debug('Set output %s True for %s seconds', self.go_down, movement)
             self.io.setoutput(self.go_down, True)
 
-        endtime = time() + movement
+        endtime = time() + movement - lagg
         now = time()
         sleep(0.1)
         down_position_reset = False
@@ -181,20 +183,15 @@ class ventmotor:
         if go_up is True:
             logging.debug('Set output %s False', self.go_up)
             self.io.setoutput(self.go_up, False)
-            new_position = self.originposition + (time() - now) + self.motor['uplag']
+            new_position = self.originposition + (time() - now) + lagg
             self.motor['upcount'] = self.motor['upcount'] + 1
             
         elif go_up is False:
             logging.debug('Set output %s False', self.go_down)
             self.io.setoutput(self.go_down, False)
-            if self.motor['position'] is not 0:
-                new_position = self.originposition - (time() - now) - self.motor['downlag']
-                self.motor['downcount'] = self.motor['downcount'] + 1
-            else:
-                new_position = 0
-                self.motor['downcount'] = 0
-                self.motor['upcount'] = 0
-
+            new_position = self.originposition - (time() - now) - lagg
+            self.motor['downcount'] = self.motor['downcount'] + 1
+            
         queue.put([time(), False])
         
         for attempt in transaction.manager.attempts():
@@ -202,6 +199,8 @@ class ventmotor:
                 self.motor['cleanstate'] = True
                 if down_position_reset:
                     self.motor['position'] = 0
+                    self.motor['downcount'] = 0
+                    self.motor['upcount'] = 0
                 else:
                     self.motor['position'] = new_position
                 self.db2['data'] = reassign(self.db2['data'])
@@ -510,14 +509,11 @@ class ventilationserver(threading.Thread):
                     else:
                         leeside = 'syd'
 
-                    if self.data['weather']['windspeed'] > 18:
+                    if self.data['weather']['windspeed'] > 16:
                         leeside_factor  = 0
                         windside_factor = 0
-                    elif self.data['weather']['windspeed'] > 16:
-                        leeside_factor  = 0.20
-                        windside_factor = 0
                     elif self.data['weather']['windspeed'] > 14:
-                        leeside_factor = 0.75
+                        leeside_factor = 0.70
                         windside_factor = 0.20
                     elif self.data['weather']['windspeed'] > 12:
                         leeside_factor  = 0.90
@@ -533,21 +529,29 @@ class ventilationserver(threading.Thread):
                         regulatornord.update(self.io.getoutput('deg'), self.data['TempSetPointDay'], self.data['motornord']['position'])
                         regulatorsyd.update(self.io.getoutput('deg'), self.data['TempSetPointDay'], self.data['motorsyd']['position'])
 
+                        if self.data['hum'] > 80 and True is True and self.data['deg'] > 12:
+                            nattluft = True
+                        else:
+                            nattluft = False
+
                         if leeside == 'nord':
                             nord_max_position = self.data['motornord']['ranger'] * leeside_factor
                             syd_max_position = self.data['motorsyd']['ranger'] * windside_factor
+                            if nattluft:
+                                nord_min_position = 25 * leeside_factor
+                                syd_min_position = 25 * windside_factor
+                            else:
+                                nord_min_position = 0
+                                syd_min_position = 0
                         else:
                             nord_max_position = self.data['motornord']['ranger'] * windside_factor
                             syd_max_position = self.data['motorsyd']['ranger'] * leeside_factor
-
-
-                        #Nattluft
-                        if self.data['hum'] > 80 and True is True and self.data['deg'] > 12:
-                            nord_min_position = 25  
-                            syd_min_position = 25
-                        else:
-                            nord_min_position = 0
-                            syd_min_position = 0
+                            if nattluft:
+                                nord_min_position = 25 * windside_factor
+                                syd_min_position = 25 * leeside_factor
+                            else:
+                                nord_min_position = 0
+                                syd_min_position = 0
 
                         if regulatornord.new_position > nord_max_position:
                             nord_new_position = nord_max_position
