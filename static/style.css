@@ -1,5 +1,5 @@
                 input { border: 1px solid #ddd; color: #555;}
-                tbody tr:nth-child(odd) { background-color: #eee;  }
+                tbody tr:nth-child(odd) { background-color: #F7F7F7;  }
                 /*td:nth-child(2) { width: 100%; } */
                 td:nth-child(1)  {white-space: nowrap;}
                 td:nth-child(3) { white-space: nowrap; }
@@ -16,7 +16,7 @@
                 .item5 { grid-area: footer; }
 
                 .grid-container {
-                  font-family: Consolas;
+                  font-family: Tahoma, sans-serif;
                   display: grid;
                   grid-template-areas:
                   'header header header header'
@@ -35,7 +35,7 @@
                   margin: 0;
                   padding: 0;
                   overflow: hidden;
-                  background-color: #933;
+                  background-color: #f5d142;
                 }
 
                 li {  float: left;}
@@ -51,7 +51,7 @@
 
                 li a {
                   display: block;
-                  color: white;
+                  color: #333;
                   text-align: center;
                   padding: 14px 16px;
                   text-decoration: none;
@@ -65,12 +65,12 @@
                   -webkit-appearance:none;
                   width:25px;
                   height:25px;
-                  background:black;
+                  background:#ff5050;
                   border-radius:5px;
                   border:2px solid #fff;
                 }
                 input[type='checkbox']:checked {
-                  background: #abd;
+                  background: #66ff33;
                 }
 
                 input[type=range] {

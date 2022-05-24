@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# -*- coding: iso-8859-15 -*-
 import warnings
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", category=PendingDeprecationWarning)
@@ -16,10 +17,10 @@ import logging, sys
 from pprint import pprint
 import signal
 from copy import deepcopy
-from multiprocessing import Process, Queue, Manager
+from multiprocessing import Process, Manager
 import os
-from queue import Empty
 import transaction
+import ZODB.config
 
 logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 
@@ -33,7 +34,6 @@ def cyclewait():
 
 class ventmotor:
     def __init__(self, go_up, go_down, up_switch, down_switch, io, db2, motor_name):
-        global queue
         self.db2 = db2
         self.data = db2['data']
         self.motor = db2['data'][motor_name]
@@ -55,17 +55,8 @@ class ventmotor:
         self.io.setoutput(self.go_down, False) 
         self.io.setoutput(self.go_up, False)
 
-        self.motor['confirm'] = 'confirm'
-        self.db2['data'] = reassign(self.db2['data'])
-        transaction.commit()
-
-        while self.motor['confirm'] == 'confirm':
-            sleep(1)
-            logging.debug('Waiting for user input')
-
         logging.debug('Window down confirmed, resetting.')
         self.motor['position'] = 0
-        self.motor['confirm'] = 'no'
         self.db2['data'] = reassign(self.db2['data'])
         transaction.commit()
 
@@ -133,15 +124,12 @@ class ventmotor:
         if self.verifyposition(position) is False:
             return False
 
-        if self.motor['confirm'] == 'confirm':
-            logging.debug('Motor halt')
-            return False
-
-        queue.put([time(), True])
         for attempt in transaction.manager.attempts():
             with attempt:
                 self.motor['cleanstate'] = False
                 self.db2['data'] = reassign(self.db2['data'])
+
+        #Lägg till frysgraderkontroll
 
         if position > self.originposition:
             go_up = True
@@ -161,16 +149,18 @@ class ventmotor:
         down_position_reset = False
 
         while True:
-            sleep (0.05)
-            queue.put([time(), True])
+            sleep (0.1)
             if endtime < time():
                 if position is not 0 or go_up is True:
                     logging.debug('Finished running motor')
                     break
 
+            #Lagg till timeout ifall inte luckans stängs alls.
+
             if self.phasesequence() is False:
                 break
 
+            #Lg till fungerande logik vid vre momentbrytare
             if self.io.getoutput(self.up_switch) is False and go_up is True:
                 logging.info('Up moment switch fail')
                 break
@@ -191,8 +181,6 @@ class ventmotor:
             self.io.setoutput(self.go_down, False)
             new_position = self.originposition - (time() - now) - lagg
             self.motor['downcount'] = self.motor['downcount'] + 1
-            
-        queue.put([time(), False])
         
         for attempt in transaction.manager.attempts():
             with attempt:
@@ -259,7 +247,10 @@ class io():
         elif output == 'O_3':
             return self.revpi.io.O_3.value
         elif output == 'deg':
-            return int(self.revpi.io.Input_Word_2.value / 10)
+            val = self.revpi.io.Input_Word_2.value
+            if val >= 32768:
+                return int((val - 65536) / 10)
+            return int(val / 10)
         elif output == 'lux':
             return self.revpi.io.Input_Word_1.value / 10
         elif output == 'hum':
@@ -344,8 +335,10 @@ class sensorsync(threading.Thread):
                         self.logg['deg_history'].append({'date': now, 'deg': self.io.getoutput('deg'), 'year': a.year, 'month': a.month, 'day': a.day, 'hour': a.hour, 'minute': a.minute})
 
                     self.db1['data'] = reassign(self.db1['data'])
+                    #NY
+                    transaction.commit()
                     #print(self.db1['data'])
-            sleep(60)
+            sleep(120)
 
 class webserver(threading.Thread):
     def __init__(self, db1, db2):
@@ -399,6 +392,10 @@ class webserver(threading.Thread):
                         else:
                             self.db1['data'][key] = json[key]
                     self.db1['data'] = reassign(self.db1['data'])
+                    #NY
+                    self.db1._p_changed = True
+                    transaction.commit()
+                    print("HEJ")
 
         @socketio.on('connected', namespace='/test')
         def ccl(json):
@@ -425,19 +422,17 @@ class webserver(threading.Thread):
 
                 db1_comp['data'] = deepcopy(self.db2['data'])
 
-class database():
-    def __init__(self):
-        storage = FileStorage.FileStorage('database.fs')
-        db = DB(storage)
-        self.dba = db
-        db.pack()
-        self.connection = db.open()
-        
-    def newconn(self):
+#ändra till sql databas!
+class database():   
+    def __init__(self): 
+        storage = FileStorage.FileStorage('database.fs')    
+        db = DB(storage)    
+        self.dba = db   
+        db.pack()   
+        self.connection = db.open() 
+            
+    def newconn(self):  
         return self.connection.root()
-
-    def pack(self):
-        self.dba.pack()
 
 class ventilationserver(threading.Thread):
     def __init__(self, db2):
@@ -461,7 +456,7 @@ class ventilationserver(threading.Thread):
         W2 = {}
         now = datetime.datetime.now()
         for value in self.data['watering']:
-            difference =  datetime.datetime.strptime(self.data['watering'][value]['starttime'], '%H:%M') + datetime.timedelta(minutes=self.data['watering'][value]['wateringtime'])
+            difference =  datetime.datetime.strptime(self.data['watering'][value]['starttime'], '%H:%M') + datetime.timedelta(minutes=int(self.data['watering'][value]['wateringtime']))
             if datetime.datetime.strptime(self.data['watering'][value]['starttime'], '%H:%M').time() < now.time() < difference.time():
                 if self.data['watering'][value]['W1']:
                     W1[value] = True
@@ -588,7 +583,6 @@ class ventilationserver(threading.Thread):
                                 self.data['motornord']['movetoposition'] = self.data['motornord']['position']
                                 self.db2['data'] = reassign(self.db2['data'])
 
-                    self.conn.pack()
                     logging.debug('Ventilatonserver: Automatiskt läge')
                     sleep(0.5)
             else:
@@ -607,9 +601,9 @@ class ventilationserver(threading.Thread):
 def createdatabas(db):
     db['logg'] = {  'deg_history': [ ]}
     db['data'] = {  'TempSetPointDay': 22,
-                    'TempSetPointHeater': 10,
-                    'VentAutSwitch':   False,
-                    'HeaterSwitch':   False,
+                    'TempSetPointHeater': 1,
+                    'VentAutSwitch':   True,
+                    'HeaterSwitch':   True,
                     'deg' : 0,
                     'hum': 0,
                     'lux': 0,                    
@@ -618,7 +612,6 @@ def createdatabas(db):
                                      'uplag': 0.14, 
                                      'movetoposition': 0,
                                      'halt': False,
-                                     'confirm': 'no',
                                      'upcount': 0,
                                      'downcount': 0,
                                      'cleanstate': True,
@@ -629,7 +622,6 @@ def createdatabas(db):
                                      'uplag': 0.16, 
                                      'movetoposition': 0,
                                      'halt': False,
-                                     'confirm': 'no',
                                      'upcount': 0,
                                      'downcount': 0,
                                      'cleanstate': True,
@@ -637,7 +629,7 @@ def createdatabas(db):
 
                     'watering': {    'A': { 'starttime': '00:00',
                                             'wateringtime': 1380,
-                                            'W1': True,
+                                            'W1': False,
                                             'W2': False}, 
                                      'B': { 'starttime': '00:00',
                                             'wateringtime': 5,
@@ -664,7 +656,7 @@ def createdatabas(db):
 
 
 
-def runner(queue, event):
+def runner():
     os.nice(5)
     global ventilationserver
     global weatherserver
@@ -689,9 +681,9 @@ def runner(queue, event):
     sensorsync       = sensorsync(root.newconn(), io())
     sensorsync.start()
 
-    while not event.is_set():
-        sleep(1)
-        print('runner: event not set, sleeping')
+    while True:
+        sleep(10)
+        #print(root.newconn())
 
     ventilationserver.shutdown_flag.set()
     ventilationserver.join()
@@ -699,47 +691,4 @@ def runner(queue, event):
 
 
 if __name__ == "__main__":
-    os.nice(-5)
-    run = True
-    def handler_stop_signals(signum, frame):
-        global run
-        run = False
-
-    signal.signal(signal.SIGINT, handler_stop_signals)
-    signal.signal(signal.SIGTERM, handler_stop_signals)
-    
-    manager = Manager()
-
-    event = manager.Event()
-    queue = Queue()
-    runner = Process(target=runner, args=(queue, event))
-    runner.daemon = True
-    runner.start()
-
-    item = [0.0, False]
-
-    while run:
-        try:
-            item = queue.get(timeout=1)
-            #logging.debug("Vakthund: Ingen körning meddelad")
-                
-        except Exception as error:
-            #logging.debug("Vakthund: Timeout {}".format(str(error)))
-            pass
-            
-        if item[1] is True and item[0] + 3 < time():
-            print('Vakthund: Mer än 3 sekunder sen')
-            runner.terminate()
-            modio = revpimodio2.RevPiModIO(autorefresh=False)
-            modio.setdefaultvalues()
-            modio.writeprocimg()
-            logging.debug('Process avslutad')
-            exit()
-        else:
-            #print('Vakthund: I tid eller körning pågår ej')
-            pass
-        sleep(0.04)
-        
-    event.set()
-    print('Avslutar huvudprocess')
-    runner.join()
+    runner()

@@ -24,10 +24,10 @@
     <div class="item1">
      <ul id="menu">
        <li><a href="#" data-page="status">Status</a></li>
-       <li><a href="#" data-page="vv">Ventilation & Värme</a></li>
-       <li><a href="#" data-page="vattning">Bevattning</a></li>
-       <li><a href="#" data-page="settings">Inställningar</a></li>
+       <li><a href="#" data-page="vv">Klimat</a></li>
+       <li><a href="#" data-page="vattning">Vattning</a></li>
        <li><a href="#" data-page="logg">Logg</a></li>
+       <li><a href="#" data-page="settings">D</a></li>
        <li id="clock">10:23</li>
      </ul>
    </div>
@@ -54,13 +54,13 @@
         </tr>
         <tr>
           <td>Vattenventil 1</td>
-          <td>Stängd</td>
-          <td>Öppnar 16:00</td>
+          <td>-</td>
+          <td>-</td>
         </tr>
         <tr>
           <td>Vattenventil 2</td>
-          <td>Öppen</td>
-          <td>Stänger 15:22</td>
+          <td>-</td>
+          <td>-</td>
         </tr>
         <tr>
           <td>Luftemperatur ute</td>
@@ -138,11 +138,11 @@
         </td>
         <td><span id="textInput3"></span> &deg;C</td>
       </tr>
-      <tr>
+      <!--<tr>
         <td>Temperatur börvärde natt</td>
         <td><input type="range" min="1" max="30" value="18" class="slider" id="myRanger3" oninput="updateTextInput4(this.value)" ></td>
         <td><span id="textInput4"></span> &deg;C</td>
-      </tr>
+      </tr>-->
       <tr>
         <td>Värmetillskott av/på</td>
         <td>
@@ -156,7 +156,7 @@
         <td>&nbsp;&nbsp;&gt;&gt;&nbsp;&nbsp;Starttemperatur Värmetillskott</td>
         <td>
           <form id="tempsetpointheater" method="POST" action="#">
-            <input type="range" min="0" max="30" value="8" class="slider" id="myRange4" oninput="updateTextInput5(this.value)">
+            <input type="range" min="0" max="18" value="8" class="slider" id="myRange4" oninput="updateTextInput5(this.value)">
           </form>
         </td>
         <td><span id="textInput5"></span> &deg;C</td>
@@ -174,40 +174,39 @@
         </tr>
       </thead>
       <tr>
-        <td><form id="A_W1" method="POST" action="#"><input type="checkbox" id="A_W1d" value="True" checked="checked"></form></td>
-        <td><form id="A_W2" method="POST" action="#"><input type="checkbox" id="A_W2d" value="True" checked="checked"></form></td>
-        <td><div class="input-group clockpicker"><input type="text" class="form-control" value="09:30"></div></td>
-        <td>
-          <input type="range" min="0" max="60" value="10" class="slider" id="myRange" oninput="updateRangeInput(this)">
+        <td><form id="A_W1" method="POST" action="#"><input type="checkbox" id="A_W1d" value="True"></form></td>
+        <td><form id="A_W2" method="POST" action="#"><input type="checkbox" id="A_W2d" value="True"></form></td>
+        <td><form id="A_starttime" method="POST" action="#"><div class="input-group clockpicker"><input type="text" id="A_starttimed" class="form-control" value="09:30"></div></form></td>
+        <td><form id="A_wateringtime" method="POST" action="#"><input type="range" min="0" max="60" value="0" class="slider" id="myRangeA" oninput="updateTextInputA(this.value)"></form>
         </td>
-        <td><output type="text" value="8">8</output> Minuter</td>
+        <td><span id="textInputA"></span> Minuter</td>
       </tr>
       <tr>
         <td><input type="checkbox" checked="checked"></td>
         <td><input type="checkbox" checked="checked"></td>
         <td><div class="input-group clockpicker"><input type="text" class="form-control" value="09:30"></div></td>
         <td>
-          <input type="range" min="0" max="60" value="10" class="slider" id="myRange" oninput="updateRangeInput(this)">
+          <input type="range" min="0" max="60" value="10" class="slider" id="myRangeB" oninput="updateTextInputB(this.value)">
         </td>
-        <td><output type="text" value="8">8</output> Minuter</td>
+        <td><span id="textInputB"></span> Minuter</td>
       </tr>
       <tr>
         <td><input type="checkbox" checked="checked"></td>
         <td><input type="checkbox" checked="checked"></td>
         <td><div class="input-group clockpicker"><input type="text" class="form-control" value="09:30"></div></td>
         <td>
-          <input type="range" min="0" max="60" value="10" class="slider" id="myRange" oninput="updateRangeInput(this)">
+          <input type="range" min="0" max="60" value="10" class="slider" id="myRangeC" oninput="updateTextInputC(this.value)">
         </td>
-        <td><output type="text" value="8">8</output> Minuter</td>
+        <td><span id="textInputC"></span> Minuter</td>
       </tr>
       <tr>
         <td><input type="checkbox" checked="checked"></td>
         <td><input type="checkbox" checked="checked"></td>
         <td><div class="input-group clockpicker"><input type="text" class="form-control" value="09:30"></div></td>
         <td>
-          <input type="range" min="0" max="60" value="10" class="slider" id="myRange" oninput="updateRangeInput(this)">
+          <input type="range" min="0" max="60" value="10" class="slider" id="myRangeD" oninput="updateTextInputD(this.value)">
         </td>
-        <td><output type="text" value="8">8</output> Minuter</td>
+        <td><span id="textInputD"></span> Minuter</td>
       </tr>
     </table>
 
@@ -228,11 +227,4 @@
   <div id="chart_div" style="width:100%;"></div>
 </div>
 </div>
-<div id="dialog-confirm-ventnord" title="Beräkningsfel">
-  <p><span class="ui-icon ui-icon-alert" style="float:left; margin:12px 12px 20px 0;"></span>Är motor nord i helt nedstängt läge?</p>
-</div>
-<div id="dialog-confirm-ventsyd" title="Beräkningsfel">
-  <p><span class="ui-icon ui-icon-alert" style="float:left; margin:12px 12px 20px 0;"></span>Är motor syd i helt nedstängt läge?</p>
-</div>
-</body>
 </html>

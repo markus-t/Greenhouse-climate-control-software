@@ -31,8 +31,13 @@ $(document).ready(function() {
               $('#windspeed').html(msg.weather.windspeed);
               $('#hum').html(msg.hum);
               $('#lux').html(msg.lux);
-              $('#emit_data').val(msg.motornord.movetoposition);               
-              $('#emit_data2').val(msg.motorsyd.movetoposition); 
+              $('#emit_data').html(msg.motornord.movetoposition);               
+              $('#emit_data2').html(msg.motorsyd.movetoposition);                
+              $('#textInput').html(msg.motornord.position / msg.motornord.ranger * 100);    
+              $('#textInput2').html(msg.motorsyd.position / msg.motorsyd.ranger * 100);                
+              $('#textInput3').html(msg.TempSetPointDay);                
+              $('#textInput5').html(msg.TempSetPointHeater);                
+              $('#textInputA').html(msg.watering.A.wateringtime);
               if ( msg.motorsyd.confirm == 'confirm' ) {
                 dialog_ventsyd.dialog("open");
               } 
@@ -112,12 +117,24 @@ $(document).ready(function() {
               socket.emit('data_send', {watering: {A: {W2: $('#A_W2d').is(':checked')}}});
               return false;
             });
+            $('form#A_starttime').change(function(event) {
+              socket.emit('data_send', {watering: {A: {starttime: $('#A_starttimed').val()}}});
+              return false;
+            });
+            $('form#A_wateringtime').change(function(event) {
+              socket.emit('data_send', {watering: {A: {wateringtime: $('#myRangeA').val()}}});
+              return false;
+            });
             $('form#B_W1').change(function(event) {
               socket.emit('data_send', {watering: {B: {W1: $('#B_W1d').is(':checked')}}});
               return false;
             });
             $('form#B_W2').change(function(event) {
               socket.emit('data_send', {watering: {B: {W2: $('#B_W2d').is(':checked')}}});
+              return false;
+            });
+            $('form#B_starttime').change(function(event) {
+              socket.emit('data_send', {watering: {B: {starttime: $('#B_starttimed').val()}}});
               return false;
             });
             $('form#C_W1').change(function(event) {
@@ -128,6 +145,10 @@ $(document).ready(function() {
               socket.emit('data_send', {watering: {C: {W2: $('#C_W2d').is(':checked')}}});
               return false;
             });
+            $('form#C_starttime').change(function(event) {
+              socket.emit('data_send', {watering: {C: {starttime: $('#C_starttimed').val()}}});
+              return false;
+            });
             $('form#D_W1').change(function(event) {
               socket.emit('data_send', {watering: {D: {W1: $('#D_W1d').is(':checked')}}});
               return false;
@@ -136,41 +157,11 @@ $(document).ready(function() {
               socket.emit('data_send', {watering: {D: {W2: $('#D_W2d').is(':checked')}}});
               return false;
             });
-
-
-            dialog_ventnord = $( "#dialog-confirm-ventnord" ).dialog({
-              autoOpen: false,
-              resizable: false,
-              height: "auto",
-              width: 400,
-              modal: true,
-              buttons: {
-                Ja: function() {
-                  $( this ).dialog( "close" );
-                  socket.emit('data_send', {motornord: {confirm: 'confirmed'}});
-                },
-                Nej: function() {
-                  $( this ).dialog( "close" );
-                }
-              }
+            $('form#D_starttime').change(function(event) {
+              socket.emit('data_send', {watering: {D: {starttime: $('#D_starttimed').val()}}});
+              return false;
             });
 
-            dialog_ventsyd = $( "#dialog-confirm-ventsyd" ).dialog({
-              autoOpen: false,
-              resizable: false,
-              height: "auto",
-              width: 400,
-              modal: true,
-              buttons: {
-                Ja: function() {
-                  $( this ).dialog( "close" );
-                  socket.emit('data_send', {motorsyd: {confirm: 'confirmed'}});
-                },
-                Nej: function() {
-                  $( this ).dialog( "close" );
-                }
-              }
-            });
           });
 
 
@@ -205,6 +196,21 @@ $(document).ready(function() {
 
     function updateTextInput5(val) {
       document.getElementById('textInput5').innerHTML=val; 
+    }
+
+    function updateTextInputA(val) {
+      document.getElementById('textInputA').innerHTML=val; 
+    }
+
+    function updateTextInputB(val) {
+      document.getElementById('textInputB').innerHTML=val; 
+    }
+
+    function updateTextInputC(val) {
+      document.getElementById('textInputC').innerHTML=val; 
+    }   
+    function updateTextInputD(val) {
+      document.getElementById('textInputD').innerHTML=val; 
     }
 
         // Load the Visualization API and the piechart package.
