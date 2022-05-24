@@ -10,7 +10,6 @@ import urllib.request
 import threading
 from flask import Flask, render_template
 from flask_socketio import SocketIO
-from ZODB import FileStorage, DB
 import transaction
 import json
 import logging, sys
@@ -20,23 +19,17 @@ from copy import deepcopy
 from multiprocessing import Process, Manager
 import os
 import transaction
-import ZODB.config
 
 logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
-
-def reassign(ordbok):
-    temp = {}
-    temp = ordbok
-    return temp
 
 def cyclewait():
     sleep(0.2)
 
 class ventmotor:
-    def __init__(self, go_up, go_down, up_switch, down_switch, io, db2, motor_name):
-        self.db2 = db2
-        self.data = db2['data']
-        self.motor = db2['data'][motor_name]
+    def __init__(self, go_up, go_down, up_switch, down_switch, io, db, motor_name):
+        self.db2 = db
+        self.data = db['data']
+        self.motor = db['data'][motor_name]
         self.go_up = go_up
         self.go_down = go_down
         self.up_switch = up_switch
@@ -57,9 +50,6 @@ class ventmotor:
 
         logging.debug('Window down confirmed, resetting.')
         self.motor['position'] = 0
-        self.db2['data'] = reassign(self.db2['data'])
-        transaction.commit()
-
     def cleanstate(self):
         if self.motor['cleanstate'] is True:
             logging.debug('Motor is in clean state')
@@ -68,8 +58,6 @@ class ventmotor:
             logging.debug('Motor is not in clean state')
             self.reinit() 
             self.motor['cleanstate'] = True
-            self.db2['data'] = reassign(self.db2['data'])
-            transaction.commit()
             return False
 
     def verifyposition(self, position):
@@ -127,7 +115,6 @@ class ventmotor:
         for attempt in transaction.manager.attempts():
             with attempt:
                 self.motor['cleanstate'] = False
-                self.db2['data'] = reassign(self.db2['data'])
 
         #Lägg till frysgraderkontroll
 
@@ -191,7 +178,6 @@ class ventmotor:
                     self.motor['upcount'] = 0
                 else:
                     self.motor['position'] = new_position
-                self.db2['data'] = reassign(self.db2['data'])
 
 
 class io():
@@ -307,9 +293,6 @@ class weatherserver(threading.Thread):
                         self.weather['humudity'] = value['values'][0]
                     if value['name'] == 'tcc_mean':
                         self.weather['cloudness'] = value['values'][0]
-                for attempt in transaction.manager.attempts():
-                    with attempt:
-                        self.db1['data'] = reassign(self.db1['data'])
             sleep(1000)
 
 class sensorsync(threading.Thread):
@@ -323,29 +306,23 @@ class sensorsync(threading.Thread):
         
     def run(self):
         while True:
-            for attempt in transaction.manager.attempts():
-                with attempt:
-                    logging.debug('Sensorsync: sync')
-                    self.data['lux'] = self.io.getoutput('lux')
-                    self.data['hum'] = self.io.getoutput('hum')
-                    self.data['deg'] = self.io.getoutput('deg')
-                    if not self.logg['deg_history'] or self.logg['deg_history'][-1]['deg'] != self.data['deg']:
-                        now = datetime.datetime.now().replace(microsecond=0).isoformat()
-                        a = datetime.datetime.now()
-                        self.logg['deg_history'].append({'date': now, 'deg': self.io.getoutput('deg'), 'year': a.year, 'month': a.month, 'day': a.day, 'hour': a.hour, 'minute': a.minute})
-
-                    self.db1['data'] = reassign(self.db1['data'])
-                    #NY
-                    transaction.commit()
-                    #print(self.db1['data'])
+            with lock:
+                logging.debug('Sensorsync: sync')
+                self.data['lux'] = self.io.getoutput('lux')
+                self.data['hum'] = self.io.getoutput('hum')
+                self.data['deg'] = self.io.getoutput('deg')
+                if not self.logg['deg_history'] or self.logg['deg_history'][-1]['deg'] != self.data['deg']:
+                    now = datetime.datetime.now().replace(microsecond=0).isoformat()
+                    a = datetime.datetime.now()
+                    self.logg['deg_history'].append({'date': now, 'deg': self.io.getoutput('deg'), 'year': a.year, 'month': a.month, 'day': a.day, 'hour': a.hour, 'minute': a.minute})
             sleep(120)
 
 class webserver(threading.Thread):
-    def __init__(self, db1, db2):
+    def __init__(self, db):
         threading.Thread.__init__(self)
         self.daemon = True
-        self.db1 = db1
-        self.db2 = db2
+        self.db1 = db
+        self.db2 = db
 
     def run(self):
         app = Flask(__name__, static_url_path='/static')
@@ -378,24 +355,18 @@ class webserver(threading.Thread):
 
         @socketio.on('data_send', namespace='/test')
         def handle_client_connect_event(json):
-            for attempt in transaction.manager.attempts():
-                with attempt:
-                    logging.debug('Webserver: Sparar JSON data: %s', json)
-                    for key in json:
-                        if type(json[key]) is dict:
-                            for key2 in json[key]:
-                                if type(json[key][key2]) is dict:
-                                    for key3 in json[key][key2]:
-                                        self.db1['data'][key][key2][key3] = json[key][key2][key3]
-                                else:
-                                        self.db1['data'][key][key2] = json[key][key2]
-                        else:
-                            self.db1['data'][key] = json[key]
-                    self.db1['data'] = reassign(self.db1['data'])
-                    #NY
-                    self.db1._p_changed = True
-                    transaction.commit()
-                    print("HEJ")
+            with lock:
+                logging.debug('Webserver: Sparar JSON data: %s', json)
+                for key in json:
+                    if type(json[key]) is dict:
+                        for key2 in json[key]:
+                            if type(json[key][key2]) is dict:
+                                for key3 in json[key][key2]:
+                                    self.db1['data'][key][key2][key3] = json[key][key2][key3]
+                            else:
+                                    self.db1['data'][key][key2] = json[key][key2]
+                    else:
+                        self.db1['data'][key] = json[key]
 
         @socketio.on('connected', namespace='/test')
         def ccl(json):
@@ -419,28 +390,14 @@ class webserver(threading.Thread):
             if db1_comp['data'] != self.db2['data']:
                 logging.debug('Webserver: skickar ny data till webbläsare')
                 self.socketio.emit('my_response', self.db2['data'], namespace='/test')
-
                 db1_comp['data'] = deepcopy(self.db2['data'])
 
-#ändra till sql databas!
-class database():   
-    def __init__(self): 
-        storage = FileStorage.FileStorage('database.fs')    
-        db = DB(storage)    
-        self.dba = db   
-        db.pack()   
-        self.connection = db.open() 
-            
-    def newconn(self):  
-        return self.connection.root()
-
 class ventilationserver(threading.Thread):
-    def __init__(self, db2):
+    def __init__(self, db):
         threading.Thread.__init__(self)
         self.shutdown_flag = threading.Event()
-        self.conn = db2
-        self.db2 = db2.newconn()
-        self.data = self.db2['data']
+        self.db = db
+        self.data = db['data']
         self.io = io()
 
     def heater(self):
@@ -488,8 +445,8 @@ class ventilationserver(threading.Thread):
  
 
     def run(self):
-        motorsyd = ventmotor('O_3', 'O_4', 'I_3', 'I_4', self.io, self.db2, 'motorsyd')
-        motornord = ventmotor('O_1', 'O_2', 'I_1', 'I_2', self.io, self.db2, 'motornord')
+        motorsyd = ventmotor('O_3', 'O_4', 'I_3', 'I_4', self.io, self.db, 'motorsyd')
+        motornord = ventmotor('O_1', 'O_2', 'I_1', 'I_2', self.io, self.db, 'motornord')
         regulatorsyd = tempregulator()
         regulatornord = tempregulator()
      
@@ -499,7 +456,7 @@ class ventilationserver(threading.Thread):
                 time_u = time()
                 while self.data['VentAutSwitch'] is True and self.shutdown_flag.is_set() == False:
 
-                    if self.data['weather']['winddirection'] > 90 and self.db2['data']['weather']['winddirection'] < 270:
+                    if self.data['weather']['winddirection'] > 90 and self.db['data']['weather']['winddirection'] < 270:
                         leeside = 'nord'
                     else:
                         leeside = 'syd'
@@ -581,10 +538,9 @@ class ventilationserver(threading.Thread):
                             with attempt:
                                 self.data['motornord']['movetoposition'] = self.data['motornord']['position']
                                 self.data['motornord']['movetoposition'] = self.data['motornord']['position']
-                                self.db2['data'] = reassign(self.db2['data'])
 
                     logging.debug('Ventilatonserver: Automatiskt läge')
-                    sleep(0.5)
+                    sleep(2)
             else:
                 motornordposition = int(self.data['motornord']['movetoposition']) / 100 * self.data['motornord']['ranger']
                 motornord.moveabsoluteposition(int(motornordposition))
@@ -592,11 +548,20 @@ class ventilationserver(threading.Thread):
                 motorsyd.moveabsoluteposition(int(motorsydposition))
                 logging.debug('Ventilatonserver: Manuellt läge')
                 self.heater()
-                self.conn.pack()
-                sleep(1)
+                sleep(2)
         
         logging.info('Ventilatonserver: Avslutad')
 
+class database():
+    def __init__(self):
+        storage = FileStorage.FileStorage('db.fs')
+        
+    def newconn(self):
+        conn = self.db.open()
+        return conn.root()
+
+    def pack(self):
+        self.dba.pack()
 
 def createdatabas(db):
     db['logg'] = {  'deg_history': [ ]}
@@ -652,7 +617,6 @@ def createdatabas(db):
                                      'humudity': 0,
                                      'winddirection': 0}
               }
-    transaction.commit()
 
 
 
@@ -662,28 +626,33 @@ def runner():
     global weatherserver
     global sensorsync
     global webserver
-
-    root = database()
     
     ###updatencomment to create databas###
-    #db = root.newconn()
+    db = {}
     #createdatabas(db)
+    with open('db.json', 'r') as fp:
+        db = json.load(fp)
 
-    webserver           = webserver(root.newconn(), root.newconn())
+    global lock 
+    lock = threading.Lock()
+
+    webserver           = webserver(db)
     webserver.start()
 
-    ventilationserver   = ventilationserver(root)        
+    ventilationserver   = ventilationserver(db)        
     ventilationserver.start()
 
-    weatherserver       = weatherserver(root.newconn())
+    weatherserver       = weatherserver(db)
     weatherserver.start()
 
-    sensorsync       = sensorsync(root.newconn(), io())
+    sensorsync       = sensorsync(db, io())
     sensorsync.start()
 
     while True:
         sleep(10)
-        #print(root.newconn())
+        with open('db.json.tmp', 'w') as fp:
+            json.dump(db, fp)
+        os.rename('db.json.tmp', 'db.json')
 
     ventilationserver.shutdown_flag.set()
     ventilationserver.join()

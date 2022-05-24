@@ -33,11 +33,12 @@ $(document).ready(function() {
               $('#lux').html(msg.lux);
               $('#emit_data').html(msg.motornord.movetoposition);               
               $('#emit_data2').html(msg.motorsyd.movetoposition);                
-              $('#textInput').html(msg.motornord.position / msg.motornord.ranger * 100);    
-              $('#textInput2').html(msg.motorsyd.position / msg.motorsyd.ranger * 100);                
+              $('#textInput').html(Math.trunc(msg.motornord.position / msg.motornord.ranger * 100));    
+              $('#textInput2').html(Math.trunc(msg.motorsyd.position / msg.motorsyd.ranger * 100));                
               $('#textInput3').html(msg.TempSetPointDay);                
               $('#textInput5').html(msg.TempSetPointHeater);                
-              $('#textInputA').html(msg.watering.A.wateringtime);
+              $('#textInputA').html(msg.watering.A.wateringtime);                
+              $('#A_starttimed').val(msg.watering.A.starttime);
               if ( msg.motorsyd.confirm == 'confirm' ) {
                 dialog_ventsyd.dialog("open");
               } 
@@ -47,6 +48,16 @@ $(document).ready(function() {
               if ( msg.VentAutSwitch ) {
                 $(".vent").hide("fast");
                 $( "#data" ).prop( "checked", true );
+              }
+              if ( msg.HeaterSwitch ) {
+                $(".heat").hide("fast");
+                $( "#data2" ).prop( "checked", true );
+              }
+              if ( msg.watering.A.W1 ) {
+                $( "#A_W1d" ).prop( "checked", true );
+              }
+              if ( msg.watering.A.W2 ) {
+                $( "#A_W2d" ).prop( "checked", true );
               }
               if ( msg.motornord.cleanstate == true) {
                 $('#motornordState').text("Stilla");
